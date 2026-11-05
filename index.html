@@ -2,10 +2,12 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CoFocus - 集中作業ルーム</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <script src="https://cdn.tailwindcss.com"></script>
   
   <!-- Firebase SDK (CDN) -->
@@ -13,167 +15,169 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
   <style>
-    body { background-color: #ffffff; color: #0f1419; }
-    .custom-scroll::-webkit-scrollbar { width: 5px; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #cfd9de; border-radius: 3px; }
+    body { background-color: #ffffff; color: #0f1419; -webkit-font-smoothing: antialiased; }
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #e1e8ed; border-radius: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #cfd9de; }
   </style>
 </head>
-<body class="font-sans antialiased min-h-screen flex flex-col bg-white text-[#0f1419]">
+<body class="font-sans min-h-screen flex flex-col bg-white text-[#0f1419] select-none">
 
-  <!-- ================= 1. 部屋一覧 & 作成画面 ================= -->
-  <div id="lobby-view" class="max-w-4xl mx-auto w-full p-6 flex-1 flex flex-col">
-    <div class="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
+  <!-- ================= 1. 部屋一覧画面 ================= -->
+  <div id="lobby-view" class="max-w-4xl mx-auto w-full p-4 md:p-6 flex-1 flex flex-col">
+    <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-gray-900">CoFocus</h1>
-        <p class="text-xs text-gray-500 mt-0.5">同じ目標を持つ仲間と集中するスペース</p>
+        <h1 class="text-2xl font-black tracking-tight text-gray-900">CoFocus</h1>
+        <p class="text-xs text-gray-400 mt-0.5">仲間と一緒に集中するバーチャル自習室</p>
       </div>
-      <button onclick="openCreateModal()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white text-sm font-bold px-4 py-2 rounded-full transition shadow-sm">
+      <button onclick="openCreateModal()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white text-xs font-bold px-4 py-2 rounded-full transition shadow-sm active:scale-95">
         ＋ 部屋を作成
       </button>
     </div>
 
-    <!-- 検索バー -->
     <div class="mb-6">
       <input type="text" id="tag-search" oninput="renderRooms()" placeholder="タグや部屋名で検索（例: TOEIC, 卒論）" 
-             class="w-full bg-[#eff3f4] border border-transparent focus:border-[#1d9bf0] focus:bg-white rounded-full px-4 py-2 text-sm outline-none transition">
+             class="w-full bg-[#f7f9f9] border border-transparent focus:border-[#1d9bf0] focus:bg-white rounded-full px-4 py-2.5 text-xs outline-none transition">
     </div>
 
-    <!-- 部屋カード一覧 -->
     <div id="room-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
   </div>
 
-  <!-- ================= 2. 部屋作成モーダル ================= -->
-  <div id="create-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-xl">
-      <h3 class="text-base font-bold text-gray-900 mb-4">新規ルーム作成</h3>
+  <!-- ================= 2. 新しい部屋を作成モーダル ================= -->
+  <div id="create-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white border border-gray-100 rounded-3xl p-6 w-full max-w-md shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <button onclick="closeCreateModal()" class="text-xs text-gray-500 hover:text-gray-800 font-bold">← 戻る</button>
+        <h3 class="text-sm font-bold text-gray-900">新しい部屋を作成</h3>
+        <div class="w-8"></div>
+      </div>
       <div class="space-y-4 text-xs">
         <div>
           <label class="block font-semibold text-gray-600 mb-1">部屋名（必須）</label>
-          <input type="text" id="new-room-name" placeholder="例: TOEIC 800点を目指す会" class="w-full bg-[#eff3f4] border border-gray-200 rounded-lg p-2.5 outline-none focus:border-[#1d9bf0] focus:bg-white">
+          <input type="text" id="new-room-name" placeholder="例: TOEIC 800点を目指す会" class="w-full bg-[#f7f9f9] border border-gray-200 rounded-xl p-2.5 outline-none focus:border-[#1d9bf0] focus:bg-white transition">
         </div>
         <div>
           <label class="block font-semibold text-gray-600 mb-1">目標タグ（スペース区切り）</label>
-          <input type="text" id="new-room-tags" placeholder="TOEIC 英語 勉強" class="w-full bg-[#eff3f4] border border-gray-200 rounded-lg p-2.5 outline-none focus:border-[#1d9bf0] focus:bg-white">
+          <input type="text" id="new-room-tags" placeholder="TOEIC 英語 勉強" class="w-full bg-[#f7f9f9] border border-gray-200 rounded-xl p-2.5 outline-none focus:border-[#1d9bf0] focus:bg-white transition">
         </div>
         <div>
           <label class="block font-semibold text-gray-600 mb-1">公開設定</label>
-          <select id="new-room-visibility" class="w-full bg-[#eff3f4] border border-gray-200 rounded-lg p-2.5 outline-none focus:border-[#1d9bf0]">
+          <select id="new-room-visibility" class="w-full bg-[#f7f9f9] border border-gray-200 rounded-xl p-2.5 outline-none focus:border-[#1d9bf0]">
             <option value="public">公開（一覧に表示）</option>
             <option value="link">限定公開（リンクを知っている人のみ）</option>
           </select>
         </div>
       </div>
       <div class="flex justify-end gap-2 mt-6">
-        <button onclick="closeCreateModal()" class="px-4 py-2 rounded-full text-gray-500 hover:bg-gray-100 text-xs font-semibold">キャンセル</button>
-        <button onclick="createRoom()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] px-4 py-2 rounded-full text-white text-xs font-bold transition">作成して入室</button>
+        <button onclick="createRoom()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] px-5 py-2 rounded-full text-white text-xs font-bold transition shadow-xs active:scale-95">作成して入室</button>
       </div>
     </div>
   </div>
 
-  <!-- ================= 3. 入室前ToDo準備モーダル ================= -->
-  <div id="entry-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-xl flex flex-col max-h-[85vh]">
-      <h3 class="text-base font-bold text-gray-900 mb-1">入室準備</h3>
-      <p class="text-xs text-gray-500 mb-3">ニックネームを設定してください。<span class="text-gray-400">（※ToDoは登録せずにそのまま入室も可能です）</span></p>
+  <!-- ================= 3. 入室準備モーダル ================= -->
+  <div id="entry-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white border border-gray-100 rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between mb-4">
+        <button onclick="closeEntryModal()" class="text-xs text-gray-500 hover:text-gray-800 font-bold">← 戻る</button>
+        <h3 class="text-sm font-bold text-gray-900">入室準備</h3>
+        <div class="w-8"></div>
+      </div>
 
-      <div class="mb-3">
+      <div class="mb-4">
         <label class="block font-semibold text-gray-600 text-xs mb-1">ニックネーム</label>
-        <input type="text" id="user-nickname" placeholder="ニックネームを入力" class="w-full bg-[#eff3f4] border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#1d9bf0] focus:bg-white">
+        <input type="text" id="user-nickname" placeholder="ニックネームを入力" class="w-full bg-[#f7f9f9] border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#1d9bf0] focus:bg-white transition">
       </div>
       
-      <div class="mb-2 flex justify-between items-center">
-        <label class="block font-semibold text-gray-600 text-xs">ToDoリスト</label>
-        <span class="text-[10px] text-gray-400">スキップ可</span>
+      <div class="mb-2">
+        <label class="block font-semibold text-gray-600 text-xs">ToDoリスト作成（任意）</label>
       </div>
-      <div id="pre-entry-todo-list" class="space-y-2 overflow-y-auto custom-scroll mb-3 max-h-36 pr-1"></div>
+      <div id="pre-entry-todo-list" class="space-y-1.5 overflow-y-auto custom-scroll mb-3 max-h-36 pr-1"></div>
 
       <div class="flex gap-2 mb-4">
-        <input type="text" id="pre-entry-input" onkeydown="if(event.key==='Enter') addPreEntryTodo()" placeholder="ToDoを追加..." class="flex-1 bg-[#eff3f4] border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#1d9bf0] focus:bg-white">
-        <button onclick="addPreEntryTodo()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold px-3 py-2 rounded-lg transition">追加</button>
+        <input type="text" id="pre-entry-input" placeholder="ToDoを追加..." class="flex-1 bg-[#f7f9f9] border border-gray-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#1d9bf0] focus:bg-white transition">
+        <button id="pre-entry-add-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold px-3 py-2 rounded-xl transition">追加</button>
       </div>
 
       <div class="flex justify-end gap-2 border-t border-gray-100 pt-3">
-        <button onclick="confirmEntry()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] px-5 py-2 rounded-full text-white text-xs font-bold transition">入室する</button>
+        <button onclick="confirmEntry()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] px-5 py-2 rounded-full text-white text-xs font-bold transition shadow-xs active:scale-95">入室する</button>
       </div>
     </div>
   </div>
 
-  <!-- ================= 4. 集中メイン画面 ================= -->
-  <div id="room-view" class="hidden flex-1 flex flex-col h-screen">
-    <!-- ヘッダー -->
-    <header class="h-14 border-b border-gray-200 px-6 flex justify-between items-center bg-white sticky top-0 z-10">
+  <!-- ================= 4. 集中作業メインルーム ================= -->
+  <div id="room-view" class="hidden flex-1 flex flex-col h-screen overflow-hidden">
+    <header class="h-14 border-b border-gray-200 px-4 md:px-6 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
       <button onclick="leaveRoom()" class="text-xs font-bold text-gray-500 hover:text-red-500 transition">← 退出</button>
       
       <div class="flex items-center gap-3">
-        <span id="active-working-count" class="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
-          ● 0人が集中作業中
+        <span id="active-working-count" class="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full">
+          ● 0人が作業中
         </span>
       </div>
 
       <div class="flex items-center gap-2">
-        <button onclick="copyRoomLink()" class="text-xs text-gray-600 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-full transition font-medium">リンクをコピー</button>
-        <button id="screen-share-btn" onclick="toggleScreenShare()" class="text-xs border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-full transition font-medium">画面共有</button>
-        <button id="camera-toggle-btn" onclick="toggleCamera()" class="text-xs border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-full transition font-medium">カメラ OFF</button>
+        <button onclick="copyRoomLink()" class="text-xs text-gray-600 border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-full transition font-medium">リンクをコピー</button>
+        <button id="screen-share-btn" onclick="toggleScreenShare()" class="text-xs border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-full transition font-medium">画面共有</button>
+        <button id="camera-toggle-btn" onclick="toggleCamera()" class="text-xs border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-full transition font-medium">カメラ OFF</button>
       </div>
     </header>
 
-    <!-- 3カラムレイアウト -->
     <div class="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden bg-white">
       
       <!-- 左カラム: ルーム情報 & ToDoリスト -->
-      <div class="md:col-span-3 border-r border-gray-200 p-5 flex flex-col custom-scroll overflow-y-auto">
-        <div class="mb-5 pb-4 border-b border-gray-100">
+      <div class="md:col-span-3 border-r border-gray-200 p-4 md:p-5 flex flex-col custom-scroll overflow-y-auto">
+        <div class="mb-4 pb-3 border-b border-gray-100">
           <span id="current-room-vis" class="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-600">公開</span>
-          <h2 id="current-room-name" class="text-base font-bold mt-1 text-gray-900 leading-snug">ルーム名</h2>
+          <h2 id="current-room-name" class="text-sm font-bold mt-1 text-gray-900 leading-snug">ルーム名</h2>
           <div id="current-room-tags" class="text-xs text-[#1d9bf0] mt-1 space-x-1 font-medium"># タグ</div>
         </div>
 
-        <div class="bg-[#f7f9f9] p-3 rounded-xl border border-gray-100 mb-5">
-          <div class="text-[11px] text-gray-500">この部屋で作業した時間</div>
-          <div id="total-focus-time" class="text-xl font-bold text-gray-900 mt-0.5">0分</div>
+        <div class="bg-[#f7f9f9] p-3 rounded-2xl border border-gray-100 mb-4">
+          <div class="text-[11px] text-gray-400 font-medium">この部屋で作業した時間</div>
+          <div id="total-focus-time" class="text-2xl font-black text-gray-900 mt-0.5 tracking-tight">0分</div>
         </div>
 
-        <!-- ToDo Section -->
-        <div class="flex-1 flex flex-col">
-          <div class="flex justify-between items-center mb-3">
+        <div class="flex-1 flex flex-col min-h-[180px]">
+          <div class="flex justify-between items-center mb-2">
             <span class="text-xs font-bold text-gray-700">ToDo</span>
-            <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+            <label class="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer hover:text-gray-600">
               <input type="checkbox" id="todo-public-toggle" checked onchange="toggleTodoVisibility()" class="rounded border-gray-300 text-[#1d9bf0] focus:ring-0"> 公開
             </label>
           </div>
 
-          <div id="todo-list" class="space-y-2 mb-3"></div>
+          <div id="todo-list" class="space-y-1.5 mb-3 overflow-y-auto custom-scroll pr-1 flex-1"></div>
 
           <div class="flex gap-2 mt-auto pt-2">
-            <input type="text" id="new-todo-input" onkeydown="if(event.key==='Enter') addTodo()" placeholder="ToDoを追加..." class="flex-1 bg-[#eff3f4] border border-transparent focus:border-[#1d9bf0] focus:bg-white rounded-lg px-3 py-1.5 text-xs outline-none">
-            <button onclick="addTodo()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white px-3 py-1.5 rounded-lg text-xs font-bold transition">＋</button>
+            <input type="text" id="new-todo-input" placeholder="ToDoを追加..." class="flex-1 bg-[#f7f9f9] border border-transparent focus:border-[#1d9bf0] focus:bg-white rounded-xl px-3 py-2 text-xs outline-none transition">
+            <button id="new-todo-add-btn" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs">＋</button>
           </div>
         </div>
       </div>
 
-      <!-- 中央カラム: タイマー & 最新5件の通知 -->
-      <div class="md:col-span-5 flex flex-col items-center justify-between p-6 border-r border-gray-200 bg-[#f7f9f9]/40 relative">
-        <div class="w-full bg-white border border-gray-200 rounded-xl p-3 flex justify-around items-center text-xs shadow-sm">
+      <!-- 中央カラム: タイマー & 通知履歴 -->
+      <div class="md:col-span-5 flex flex-col items-center justify-between p-4 md:p-6 border-r border-gray-200 bg-[#fafafa]/50 relative overflow-y-auto custom-scroll">
+        <div class="w-full bg-white border border-gray-200 rounded-2xl p-3 flex justify-around items-center text-xs shadow-xs">
           <div class="flex items-center gap-1.5">
-            <span class="text-gray-500 font-medium">作業</span>
-            <input type="number" id="custom-work-mins" value="25" min="1" max="180" class="w-12 border border-gray-300 rounded px-1.5 py-0.5 text-center font-bold">
-            <span class="text-gray-500">分</span>
+            <span class="text-gray-400 font-medium">作業</span>
+            <input type="number" id="custom-work-mins" value="25" min="1" max="180" class="w-12 border border-gray-200 rounded-lg px-1.5 py-0.5 text-center font-bold outline-none focus:border-[#1d9bf0]">
+            <span class="text-gray-400">分</span>
           </div>
           <div class="h-4 w-px bg-gray-200"></div>
           <div class="flex items-center gap-1.5">
-            <span class="text-gray-500 font-medium">休憩</span>
-            <input type="number" id="custom-break-mins" value="5" min="1" max="60" class="w-12 border border-gray-300 rounded px-1.5 py-0.5 text-center font-bold">
-            <span class="text-gray-500">分</span>
+            <span class="text-gray-400 font-medium">休憩</span>
+            <input type="number" id="custom-break-mins" value="5" min="1" max="60" class="w-12 border border-gray-200 rounded-lg px-1.5 py-0.5 text-center font-bold outline-none focus:border-[#1d9bf0]">
+            <span class="text-gray-400">分</span>
           </div>
-          <button onclick="applyCustomTime()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded font-bold text-xs transition">適用</button>
+          <button onclick="applyCustomTime()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg font-bold text-xs transition">適用</button>
         </div>
 
-        <div class="flex flex-col items-center justify-center my-auto">
-          <span id="timer-state-label" class="text-xs tracking-widest text-[#1d9bf0] font-bold mb-2">作業中</span>
-          <div id="timer-display" class="text-7xl font-mono font-bold tracking-tight text-gray-900 mb-6">25:00</div>
+        <div class="flex flex-col items-center justify-center my-6">
+          <span id="timer-state-label" class="text-xs tracking-widest text-amber-500 font-bold mb-2">一時停止中</span>
+          <div id="timer-display" class="text-7xl font-mono font-black tracking-tight text-gray-900 mb-6">25:00</div>
           
           <div class="flex gap-3">
-            <button id="timer-start-btn" onclick="toggleTimer()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold px-8 py-2.5 rounded-full text-xs transition shadow">
+            <button id="timer-start-btn" onclick="toggleTimer()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold px-8 py-2.5 rounded-full text-xs transition shadow-sm active:scale-95">
               スタート
             </button>
             <button onclick="resetTimer()" class="border border-gray-300 hover:bg-gray-100 text-gray-700 px-5 py-2.5 rounded-full text-xs font-bold transition">
@@ -182,8 +186,7 @@
           </div>
         </div>
 
-        <!-- 最新5件の履歴通知エリア -->
-        <div class="w-full bg-white border border-gray-200 rounded-xl p-3 shadow-sm flex flex-col gap-1.5 max-h-32 overflow-hidden">
+        <div class="w-full bg-white border border-gray-200 rounded-2xl p-3.5 shadow-xs flex flex-col gap-1.5 max-h-28 overflow-hidden">
           <div class="text-[10px] font-bold text-gray-400">アクティビティ</div>
           <div id="ticker-history" class="space-y-1 text-xs text-gray-600 overflow-y-auto custom-scroll pr-1">
             <div>💡 ルームに参加しました</div>
@@ -191,29 +194,38 @@
         </div>
       </div>
 
-      <!-- 右カラム: メンバー一覧 & ライブチャット -->
+      <!-- 右カラム: メンバー一覧 & 休憩専用チャット -->
       <div class="md:col-span-4 p-4 flex flex-col h-full overflow-hidden bg-white">
         <div class="mb-2">
           <h3 class="text-xs font-bold text-gray-700">メンバー</h3>
         </div>
 
-        <!-- メンバー一覧（個別アコーディオン） -->
-        <div id="members-container" class="space-y-2 overflow-y-auto custom-scroll max-h-[50vh] pr-1 mb-3"></div>
+        <div id="members-container" class="space-y-2 overflow-y-auto custom-scroll flex-1 pr-1 mb-3"></div>
 
-        <!-- YouTubeライブ風 休憩チャット -->
-        <div class="flex-1 flex flex-col border border-gray-200 rounded-xl overflow-hidden bg-[#fafafa]">
-          <div class="bg-gray-100 px-3 py-1.5 border-b border-gray-200 text-[11px] font-bold text-gray-600 flex justify-between items-center">
+        <!-- 休憩チャットコンテナ -->
+        <div class="h-56 max-h-56 min-h-[14rem] flex flex-col border border-gray-200 rounded-2xl overflow-hidden bg-[#fafafa] shrink-0">
+          <div class="bg-gray-50 px-3 py-2 border-b border-gray-200 text-[11px] font-bold text-gray-600 flex justify-between items-center">
             <span>休憩チャット</span>
-            <span class="text-[10px] text-gray-400">リアルタイム</span>
           </div>
 
-          <!-- チャットログ -->
-          <div id="live-chat-messages" class="flex-1 p-2.5 space-y-2 overflow-y-auto custom-scroll text-xs"></div>
+          <!-- 作業中の完全ロック画面（作業中はここだけ表示） -->
+          <div id="chat-locked-cover" class="flex-1 flex flex-col items-center justify-center p-4 text-center bg-[#fafafa]">
+            <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <div class="text-xs font-bold text-gray-700 tracking-wide">作業モード中</div>
+            <p class="text-[10px] text-gray-400 mt-0.5 leading-relaxed">チャットは休憩中に利用できます</p>
+          </div>
 
-          <!-- メッセージ送信 -->
-          <div class="p-2 bg-white border-t border-gray-200 flex gap-1.5">
-            <input type="text" id="live-chat-input" onkeydown="if(event.key==='Enter') sendChatMessage()" placeholder="メッセージを送る..." class="flex-1 bg-[#eff3f4] border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#1d9bf0] focus:bg-white">
-            <button onclick="sendChatMessage()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white text-xs px-3 py-1.5 rounded-lg font-bold transition">送信</button>
+          <!-- 休憩・一時停止中のみ表示されるチャット本体 -->
+          <div id="chat-active-container" class="hidden flex-1 flex flex-col overflow-hidden">
+            <div id="live-chat-messages" class="flex-1 p-2.5 space-y-1.5 overflow-y-auto custom-scroll text-xs"></div>
+            <div class="p-2 bg-white border-t border-gray-200 flex gap-1.5">
+              <input type="text" id="live-chat-input" placeholder="休憩メッセージを送る..." class="flex-1 bg-[#f7f9f9] border border-gray-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#1d9bf0] focus:bg-white transition">
+              <button id="live-chat-send-btn" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white text-xs px-3.5 py-1.5 rounded-xl font-bold transition shadow-xs">送信</button>
+            </div>
           </div>
         </div>
       </div>
@@ -222,7 +234,6 @@
   </div>
 
   <script>
-    // ================= Firebase 初期化 =================
     const firebaseConfig = {
       apiKey: "AIzaSyCrfjEagw3LSeT_yH23X0eO34YXYexbtXM",
       authDomain: "focus-room-cde5b.firebaseapp.com",
@@ -245,25 +256,32 @@
       myId = 'user_' + Math.random().toString(36).substring(2, 9);
       localStorage.setItem('focus_user_id', myId);
     }
-    let myName = localStorage.getItem('focus_user_name') || '作業者_' + myId.slice(-3);
+    let myName = localStorage.getItem('focus_user_name') || '';
 
     let rooms = [];
     let currentRoom = null;
     let timerInterval = null;
+    let heartbeatInterval = null;
     let workDuration = 25 * 60;
     let breakDuration = 5 * 60;
     let timeLeft = 25 * 60;
+    let timerEndTime = 0;
     let isRunning = false;
     let isBreak = false;
-    let focusMinutesTotal = 0;
+    
+    let elapsedWorkSeconds = 0;
+    let totalFocusedMinutes = 0;
+    let lastTickTime = 0;
+
     let todos = [];
     let preEntryTodos = [];
     let remoteMembers = [];
-    let expandedMembers = {}; // 個別アコーディオン管理
+    let expandedMembers = {};
 
-    // メディア
     let isCameraOn = false;
     let isScreenSharing = false;
+    let wasCameraActiveBeforePause = false;
+    let wasScreenActiveBeforePause = false;
     let cameraStream = null;
     let screenStream = null;
     let peerConnections = {};
@@ -275,7 +293,6 @@
     let unsubscribeSignals = null;
     let unsubscribeChat = null;
 
-    // Web Audio API によるタイマー音
     function playBeepSound() {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -299,12 +316,51 @@
       }
     }
 
-    window.onload = () => {
-      if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-      document.getElementById('user-nickname').value = myName;
-      listenRooms();
+    async function deleteRoomCompletely(roomId) {
+      try {
+        const roomRef = db.collection('rooms').doc(roomId);
+        const subCollections = ['members', 'chats', 'tickers', 'signals'];
+        for (const sub of subCollections) {
+          const snap = await roomRef.collection(sub).get();
+          snap.forEach(async (doc) => {
+            await doc.ref.delete();
+          });
+        }
+        await roomRef.delete();
+      } catch (e) {
+        console.error('Delete room error:', e);
+      }
+    }
 
-      // URLパラメータの ?room=ID による直接入室
+    async function cleanupMyPresence() {
+      if (currentRoom) {
+        try {
+          const memRef = db.collection('rooms').doc(currentRoom.id).collection('members');
+          await memRef.doc(myId).delete();
+          const snapshot = await memRef.get();
+          if (snapshot.empty) {
+            await deleteRoomCompletely(currentRoom.id);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
+    window.addEventListener('beforeunload', () => { cleanupMyPresence(); });
+    window.addEventListener('pagehide', () => { cleanupMyPresence(); });
+
+    window.onload = () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW reg error:', err));
+      }
+      if (myName) {
+        document.getElementById('user-nickname').value = myName;
+      }
+      setupFormListeners();
+      listenRooms();
+      cleanupZombieRooms();
+
       const params = new URLSearchParams(window.location.search);
       const directRoomId = params.get('room');
       if (directRoomId) {
@@ -312,7 +368,109 @@
       }
     };
 
-    // 部屋一覧購読（作成日時降順・公開部屋のみ）
+    async function cleanupZombieRooms() {
+      try {
+        const snapshot = await db.collection('rooms').get();
+        const now = Date.now();
+        snapshot.forEach(async (doc) => {
+          const membersSnap = await doc.ref.collection('members').get();
+          if (membersSnap.empty) {
+            await deleteRoomCompletely(doc.id);
+          } else {
+            let hasActive = false;
+            membersSnap.forEach(mDoc => {
+              const hb = mDoc.data().lastHeartbeat || 0;
+              if (now - hb < 120000) hasActive = true;
+            });
+            if (!hasActive) {
+              await deleteRoomCompletely(doc.id);
+            }
+          }
+        });
+      } catch (e) {
+        console.error("Cleanup error:", e);
+      }
+    }
+
+    function setupFormListeners() {
+      const preInp = document.getElementById('pre-entry-input');
+      const preBtn = document.getElementById('pre-entry-add-btn');
+      preInp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.isComposing) {
+          e.preventDefault();
+          executeAddPreEntryTodo();
+        }
+      });
+      preBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        executeAddPreEntryTodo();
+      });
+
+      const todoInp = document.getElementById('new-todo-input');
+      const todoBtn = document.getElementById('new-todo-add-btn');
+      todoInp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.isComposing) {
+          e.preventDefault();
+          executeAddTodo();
+        }
+      });
+      todoBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        executeAddTodo();
+      });
+
+      const chatInp = document.getElementById('live-chat-input');
+      const chatBtn = document.getElementById('live-chat-send-btn');
+      chatInp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.isComposing) {
+          e.preventDefault();
+          executeSendChatMessage();
+        }
+      });
+      chatBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        executeSendChatMessage();
+      });
+    }
+
+    function clearInputSafely(inpElement) {
+      inpElement.value = '';
+      setTimeout(() => { inpElement.value = ''; }, 10);
+    }
+
+    function executeAddPreEntryTodo() {
+      const inp = document.getElementById('pre-entry-input');
+      const val = inp.value.trim();
+      if (!val) return;
+      preEntryTodos.push(val);
+      clearInputSafely(inp);
+      renderPreEntryTodos();
+    }
+
+    function executeAddTodo() {
+      const inp = document.getElementById('new-todo-input');
+      const val = inp.value.trim();
+      if (!val) return;
+      todos.push({ text: val, done: false });
+      clearInputSafely(inp);
+      renderTodos();
+      updateMyFirestoreState({ todos });
+    }
+
+    function executeSendChatMessage() {
+      if (!isBreak && isRunning) return;
+      const inp = document.getElementById('live-chat-input');
+      const val = inp.value.trim();
+      if (!val || !currentRoom) return;
+
+      db.collection('rooms').doc(currentRoom.id).collection('chats').add({
+        sender: myName,
+        text: val,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      clearInputSafely(inp);
+    }
+
     function listenRooms() {
       unsubscribeRooms = db.collection('rooms')
         .orderBy('createdAt', 'desc')
@@ -320,7 +478,6 @@
           rooms = [];
           snapshot.forEach((doc) => {
             const data = doc.data();
-            // 限定公開は一覧から除外
             if (data.visibility === 'public') {
               rooms.push({ id: doc.id, ...data });
             }
@@ -341,25 +498,25 @@
       });
 
       if (filtered.length === 0) {
-        list.innerHTML = `<div class="col-span-2 text-center py-10 text-gray-400 text-xs">現在募集中の公開部屋はありません</div>`;
+        list.innerHTML = `<div class="col-span-2 text-center py-12 text-gray-400 text-xs">現在募集中の公開部屋はありません</div>`;
         return;
       }
 
       filtered.forEach(r => {
         const card = document.createElement('div');
-        card.className = "bg-white border border-gray-200 hover:border-[#1d9bf0] p-5 rounded-2xl transition cursor-pointer flex flex-col justify-between shadow-sm";
+        card.className = "bg-white border border-gray-100 hover:border-[#1d9bf0] p-5 rounded-3xl transition cursor-pointer flex flex-col justify-between shadow-xs hover:shadow-md";
         card.onclick = () => selectRoom(r.id);
         card.innerHTML = `
           <div>
             <div class="flex justify-between items-start mb-2">
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-[#1d9bf0]">公開</span>
+              <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1d9bf0]">公開</span>
             </div>
-            <h4 class="font-bold text-sm text-gray-900 mb-1">${r.name}</h4>
+            <h4 class="font-bold text-sm text-gray-900 mb-1.5">${r.name}</h4>
             <div class="flex gap-1 flex-wrap">
               ${(r.tags || []).map(t => `<span class="text-xs text-gray-400">#${t}</span>`).join(' ')}
             </div>
           </div>
-          <button class="mt-4 w-full bg-[#eff3f4] hover:bg-[#1d9bf0] hover:text-white text-xs py-2 rounded-full font-bold text-gray-800 transition">入室する</button>
+          <button class="mt-4 w-full bg-[#f7f9f9] hover:bg-[#1d9bf0] hover:text-white text-xs py-2 rounded-full font-bold text-gray-800 transition">入室する</button>
         `;
         list.appendChild(card);
       });
@@ -367,6 +524,7 @@
 
     function openCreateModal() { document.getElementById('create-modal').classList.remove('hidden'); }
     function closeCreateModal() { document.getElementById('create-modal').classList.add('hidden'); }
+    function closeEntryModal() { document.getElementById('entry-modal').classList.add('hidden'); }
 
     async function createRoom() {
       const name = document.getElementById('new-room-name').value.trim();
@@ -393,16 +551,10 @@
       currentRoom = { id: doc.id, ...doc.data() };
       preEntryTodos = [];
       renderPreEntryTodos();
+      if (myName) {
+        document.getElementById('user-nickname').value = myName;
+      }
       document.getElementById('entry-modal').classList.remove('hidden');
-    }
-
-    function addPreEntryTodo() {
-      const inp = document.getElementById('pre-entry-input');
-      const val = inp.value.trim();
-      if (!val) return;
-      preEntryTodos.push(val);
-      inp.value = '';
-      renderPreEntryTodos();
     }
 
     function removePreEntryTodo(idx) {
@@ -415,7 +567,7 @@
       list.innerHTML = '';
       preEntryTodos.forEach((t, i) => {
         const div = document.createElement('div');
-        div.className = "flex justify-between items-center bg-[#eff3f4] px-3 py-1.5 rounded-lg text-xs";
+        div.className = "flex justify-between items-center bg-[#f7f9f9] px-3 py-1.5 rounded-xl text-xs";
         div.innerHTML = `
           <span class="truncate flex-1">${t}</span>
           <button onclick="removePreEntryTodo(${i})" class="text-gray-400 hover:text-red-500 font-bold ml-2">×</button>
@@ -424,19 +576,35 @@
       });
     }
 
-    function confirmEntry() {
+    async function confirmEntry() {
       const nick = document.getElementById('user-nickname').value.trim();
-      if (nick) {
-        myName = nick;
-        localStorage.setItem('focus_user_name', myName);
+      if (!nick) {
+        alert('ニックネームを入力してください');
+        return;
       }
+
+      const membersSnap = await db.collection('rooms').doc(currentRoom.id).collection('members').get();
+      let isDuplicate = false;
+      membersSnap.forEach(doc => {
+        if (doc.id !== myId && doc.data().name === nick) {
+          isDuplicate = true;
+        }
+      });
+
+      if (isDuplicate) {
+        alert('そのニックネームは既に部屋内の他の参加者が使用しています。別の名前を入力してください。');
+        return;
+      }
+
+      myName = nick;
+      localStorage.setItem('focus_user_name', myName);
+
       document.getElementById('entry-modal').classList.add('hidden');
       todos = preEntryTodos.map(text => ({ text, done: false }));
       enterRoom();
     }
 
     async function enterRoom() {
-      // 招待URLを履歴に反映
       const newUrl = `${window.location.origin}${window.location.pathname}?room=${currentRoom.id}`;
       window.history.replaceState(null, '', newUrl);
 
@@ -446,29 +614,46 @@
       document.getElementById('current-room-vis').innerText = currentRoom.visibility === 'public' ? '公開' : '限定公開';
       document.getElementById('current-room-tags').innerText = (currentRoom.tags || []).map(t => `# ${t}`).join(' ');
 
+      isRunning = false;
+      isBreak = false;
+      elapsedWorkSeconds = 0;
+      totalFocusedMinutes = 0;
+      document.getElementById('total-focus-time').innerText = '0分';
+      document.getElementById('timer-state-label').innerText = '一時停止中';
+      document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-amber-500 font-bold mb-2';
+      document.getElementById('timer-start-btn').innerText = 'スタート';
+
       applyCustomTime();
       renderTodos();
+      updateChatAccessibility();
 
       await updateMyFirestoreState({
         name: myName,
-        status: '休憩中',
+        status: '一時停止中',
         todos: todos,
         isTodoPublic: true,
         focusTime: '0分',
         isCamera: false,
         isScreen: false,
+        lastHeartbeat: Date.now(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      // メンバー同期リスナー
+      heartbeatInterval = setInterval(() => {
+        updateMyFirestoreState({ lastHeartbeat: Date.now() });
+      }, 30000);
+
       unsubscribeMembers = db.collection('rooms').doc(currentRoom.id).collection('members')
         .onSnapshot((snapshot) => {
           remoteMembers = [];
+          const now = Date.now();
           snapshot.forEach((doc) => {
             const data = { id: doc.id, ...doc.data() };
-            remoteMembers.push(data);
-            if (data.id !== myId && !peerConnections[data.id]) {
-              initiateCall(data.id);
+            if (!data.lastHeartbeat || (now - data.lastHeartbeat < 120000) || data.id === myId) {
+              remoteMembers.push(data);
+              if (data.id !== myId && !peerConnections[data.id]) {
+                initiateCall(data.id);
+              }
             }
           });
           renderMembers();
@@ -481,9 +666,10 @@
     }
 
     async function leaveRoom() {
-      stopCamera();
-      stopScreenShare();
+      stopCamera(true);
+      stopScreenShare(true);
       clearInterval(timerInterval);
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
 
       Object.keys(peerConnections).forEach(k => {
         peerConnections[k].close();
@@ -491,24 +677,13 @@
       });
       remoteStreams = {};
 
-      if (currentRoom) {
-        // 退室処理
-        const memRef = db.collection('rooms').doc(currentRoom.id).collection('members');
-        await memRef.doc(myId).delete();
-
-        // 部屋に誰もいなくなったら部屋自体を自動削除
-        const snapshot = await memRef.get();
-        if (snapshot.empty) {
-          await db.collection('rooms').doc(currentRoom.id).delete();
-        }
-      }
+      await cleanupMyPresence();
 
       if (unsubscribeMembers) unsubscribeMembers();
       if (unsubscribeTicker) unsubscribeTicker();
       if (unsubscribeSignals) unsubscribeSignals();
       if (unsubscribeChat) unsubscribeChat();
 
-      // URLパラメータをクリア
       window.history.replaceState(null, '', window.location.pathname);
       currentRoom = null;
 
@@ -521,7 +696,7 @@
       await db.collection('rooms').doc(currentRoom.id).collection('members').doc(myId).set(data, { merge: true });
     }
 
-    // ================= WebRTC 映像共有 =================
+    // ================= WebRTC =================
     function getOrCreatePeerConnection(targetUserId) {
       if (peerConnections[targetUserId]) return peerConnections[targetUserId];
       const pc = new RTCPeerConnection(rtcConfig);
@@ -607,30 +782,25 @@
       });
     }
 
-    async function toggleCamera() {
-      if (isBreak) {
-        alert('休憩中はカメラをONにできません');
-        return;
-      }
-      const btn = document.getElementById('camera-toggle-btn');
-      if (!isCameraOn) {
-        try {
-          cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-          isCameraOn = true;
-          updateMyFirestoreState({ isCamera: true });
-          updateTracksForAllPeers(cameraStream);
+    async function startCamera() {
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        isCameraOn = true;
+        updateMyFirestoreState({ isCamera: true });
+        updateTracksForAllPeers(cameraStream);
+        const btn = document.getElementById('camera-toggle-btn');
+        if (btn) {
           btn.innerText = 'カメラ ON';
           btn.classList.add('bg-gray-900', 'text-white');
-        } catch (err) {
-          alert('カメラへのアクセスを許可してください');
         }
-      } else {
-        stopCamera();
+        renderMembers();
+      } catch (err) {
+        alert('カメラへのアクセスを許可してください');
       }
-      renderMembers();
     }
 
-    function stopCamera() {
+    function stopCamera(isManual = false) {
+      if (isManual) wasCameraActiveBeforePause = false;
       if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
         cameraStream = null;
@@ -643,33 +813,45 @@
         btn.innerText = 'カメラ OFF';
         btn.classList.remove('bg-gray-900', 'text-white');
       }
-    }
-
-    async function toggleScreenShare() {
-      const btn = document.getElementById('screen-share-btn');
-      if (!isScreenSharing) {
-        try {
-          screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-          isScreenSharing = true;
-          updateMyFirestoreState({ isScreen: true });
-          updateTracksForAllPeers(screenStream);
-          btn.innerText = '画面共有 ON';
-          btn.classList.add('bg-gray-900', 'text-white');
-
-          screenStream.getVideoTracks()[0].onended = () => {
-            stopScreenShare();
-            renderMembers();
-          };
-        } catch (err) {
-          console.log(err);
-        }
-      } else {
-        stopScreenShare();
-      }
       renderMembers();
     }
 
-    function stopScreenShare() {
+    async function toggleCamera() {
+      if (isBreak || !isRunning) {
+        alert('休憩中・一時停止中はカメラをONにできません');
+        return;
+      }
+      if (!isCameraOn) {
+        wasCameraActiveBeforePause = true;
+        await startCamera();
+      } else {
+        stopCamera(true);
+      }
+    }
+
+    async function startScreenShare() {
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        isScreenSharing = true;
+        updateMyFirestoreState({ isScreen: true });
+        updateTracksForAllPeers(screenStream);
+        const btn = document.getElementById('screen-share-btn');
+        if (btn) {
+          btn.innerText = '画面共有 ON';
+          btn.classList.add('bg-gray-900', 'text-white');
+        }
+
+        screenStream.getVideoTracks()[0].onended = () => {
+          stopScreenShare(true);
+        };
+        renderMembers();
+      } catch (err) {
+        console.log(err);
+      }
+    }
+
+    function stopScreenShare(isManual = false) {
+      if (isManual) wasScreenActiveBeforePause = false;
       if (screenStream) {
         screenStream.getTracks().forEach(track => track.stop());
         screenStream = null;
@@ -682,9 +864,39 @@
         btn.innerText = '画面共有';
         btn.classList.remove('bg-gray-900', 'text-white');
       }
+      renderMembers();
     }
 
-    // ================= タイマー管理（一時停止は残り時間維持） =================
+    async function toggleScreenShare() {
+      if (isBreak || !isRunning) {
+        alert('休憩中・一時停止中は画面共有をONにできません');
+        return;
+      }
+      if (!isScreenSharing) {
+        wasScreenActiveBeforePause = true;
+        await startScreenShare();
+      } else {
+        stopScreenShare(true);
+      }
+    }
+
+    function suspendMediaStreams() {
+      if (isCameraOn) {
+        wasCameraActiveBeforePause = true;
+        stopCamera(false);
+      }
+      if (isScreenSharing) {
+        wasScreenActiveBeforePause = true;
+        stopScreenShare(false);
+      }
+    }
+
+    async function restoreMediaStreams() {
+      if (wasCameraActiveBeforePause) await startCamera();
+      if (wasScreenActiveBeforePause) await startScreenShare();
+    }
+
+    // ================= 高精度タイマー =================
     function applyCustomTime() {
       const wMins = parseInt(document.getElementById('custom-work-mins').value) || 25;
       const bMins = parseInt(document.getElementById('custom-break-mins').value) || 5;
@@ -704,77 +916,107 @@
 
     function toggleTimer() {
       if (isRunning) {
-        // 一時停止：タイマーの残り時間はそのままキープし、休憩ステータスへ
         clearInterval(timerInterval);
         isRunning = false;
         pauseToBreak();
       } else {
-        // 再開・スタート
         resumeToWork();
-        isRunning = true;
-        document.getElementById('timer-start-btn').innerText = '一時停止';
-        pushTicker(`🎯 ${myName} が作業を開始しました`);
-        
-        timerInterval = setInterval(() => {
-          if (timeLeft > 0) {
-            timeLeft--;
-            updateTimerDisplay();
-            if (!isBreak && timeLeft % 60 === 0) {
-              focusMinutesTotal++;
-              document.getElementById('total-focus-time').innerText = `${focusMinutesTotal}分`;
-              updateMyFirestoreState({ focusTime: `${focusMinutesTotal}分` });
-            }
-          } else {
-            // 時間終了
-            clearInterval(timerInterval);
-            isRunning = false;
-            playBeepSound();
-            if (!isBreak) {
-              alert('作業セット完了！休憩に入りましょう。');
-              completeWorkSet();
-            } else {
-              alert('休憩終了です！');
-              completeBreakSet();
-            }
-          }
-        }, 1000);
+        startTimerLoop();
       }
     }
 
-    // 一時停止（離席用：時間はそのまま維持）
-    function pauseToBreak() {
-      document.getElementById('timer-state-label').innerText = '休憩中 (一時停止)';
-      document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-amber-500 font-bold mb-2';
-      document.getElementById('timer-start-btn').innerText = '作業を再開';
-      if (isCameraOn) stopCamera();
-      updateMyFirestoreState({ status: '休憩中' });
+    function startTimerLoop() {
+      isRunning = true;
+      document.getElementById('timer-start-btn').innerText = '一時停止';
+      updateChatAccessibility();
+      
+      timerEndTime = Date.now() + (timeLeft * 1000);
+      lastTickTime = Date.now();
+
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const now = Date.now();
+        timeLeft = Math.max(0, Math.round((timerEndTime - now) / 1000));
+        updateTimerDisplay();
+
+        if (!isBreak) {
+          const deltaSec = (now - lastTickTime) / 1000;
+          elapsedWorkSeconds += deltaSec;
+          if (elapsedWorkSeconds >= 60) {
+            const addedMins = Math.floor(elapsedWorkSeconds / 60);
+            totalFocusedMinutes += addedMins;
+            elapsedWorkSeconds = elapsedWorkSeconds % 60;
+            document.getElementById('total-focus-time').innerText = `${totalFocusedMinutes}分`;
+            updateMyFirestoreState({ focusTime: `${totalFocusedMinutes}分` });
+          }
+        }
+        lastTickTime = now;
+
+        if (timeLeft <= 0) {
+          playBeepSound();
+          if (!isBreak) {
+            switchToBreakAuto();
+          } else {
+            switchToWorkAuto();
+          }
+        }
+      }, 500);
     }
 
-    // 再開（保持していた残り時間から続行）
-    function resumeToWork() {
-      isBreak = false;
-      document.getElementById('timer-state-label').innerText = '作業中';
-      document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-[#1d9bf0] font-bold mb-2';
-      updateMyFirestoreState({ status: '作業中' });
-    }
-
-    // 作業セット完了時の正式な休憩移行
-    function completeWorkSet() {
+    function switchToBreakAuto() {
       isBreak = true;
       timeLeft = breakDuration;
-      pauseToBreak();
+      timerEndTime = Date.now() + (breakDuration * 1000);
+
+      document.getElementById('timer-state-label').innerText = '休憩中';
+      document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-amber-500 font-bold mb-2';
+      
+      suspendMediaStreams();
+
       updateTimerDisplay();
+      updateMyFirestoreState({ status: '休憩中' });
+      updateChatAccessibility();
     }
 
-    // 休憩セット完了時の作業移行
-    function completeBreakSet() {
+    function switchToWorkAuto() {
       isBreak = false;
       timeLeft = workDuration;
+      timerEndTime = Date.now() + (workDuration * 1000);
+      lastTickTime = Date.now();
+
       document.getElementById('timer-state-label').innerText = '作業中';
       document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-[#1d9bf0] font-bold mb-2';
-      document.getElementById('timer-start-btn').innerText = 'スタート';
+
       updateTimerDisplay();
-      updateMyFirestoreState({ status: '待機中' });
+      updateMyFirestoreState({ status: '作業中' });
+      updateChatAccessibility();
+      restoreMediaStreams();
+      pushTicker(`🎯 ${myName} が新しい作業セットを開始しました`);
+    }
+
+    function pauseToBreak() {
+      document.getElementById('timer-state-label').innerText = '一時停止中';
+      document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-amber-500 font-bold mb-2';
+      document.getElementById('timer-start-btn').innerText = '再開する';
+      
+      suspendMediaStreams();
+      
+      updateMyFirestoreState({ status: '一時停止中' });
+      updateChatAccessibility();
+    }
+
+    function resumeToWork() {
+      document.getElementById('timer-state-label').innerText = isBreak ? '休憩中' : '作業中';
+      document.getElementById('timer-state-label').className = isBreak 
+        ? 'text-xs tracking-widest text-amber-500 font-bold mb-2' 
+        : 'text-xs tracking-widest text-[#1d9bf0] font-bold mb-2';
+      
+      updateMyFirestoreState({ status: isBreak ? '休憩中' : '作業中' });
+      updateChatAccessibility();
+
+      if (!isBreak) {
+        restoreMediaStreams();
+      }
     }
 
     function resetTimer() {
@@ -782,16 +1024,19 @@
       isRunning = false;
       isBreak = false;
       timeLeft = workDuration;
-      document.getElementById('timer-state-label').innerText = '作業中';
-      document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-[#1d9bf0] font-bold mb-2';
+      suspendMediaStreams();
+
+      document.getElementById('timer-state-label').innerText = '一時停止中';
+      document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-amber-500 font-bold mb-2';
       document.getElementById('timer-start-btn').innerText = 'スタート';
       updateTimerDisplay();
-      updateMyFirestoreState({ status: '待機中' });
+      updateMyFirestoreState({ status: '一時停止中' });
+      updateChatAccessibility();
     }
 
     function updateWorkingCount() {
       const working = remoteMembers.filter(m => m.status === '作業中').length;
-      document.getElementById('active-working-count').innerText = `● ${working}人が集中作業中`;
+      document.getElementById('active-working-count').innerText = `● ${working}人が作業中`;
     }
 
     // ================= ToDo 管理 =================
@@ -800,26 +1045,16 @@
       container.innerHTML = '';
       todos.forEach((t, i) => {
         const item = document.createElement('div');
-        item.className = "flex items-center justify-between p-2.5 bg-[#eff3f4] rounded-lg text-xs group";
+        item.className = "flex items-center justify-between p-2.5 bg-[#f7f9f9] rounded-xl text-xs group transition hover:bg-gray-100";
         item.innerHTML = `
           <label class="flex items-center gap-2 flex-1 cursor-pointer truncate mr-2">
             <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodoDone(${i})" class="rounded border-gray-300 text-[#1d9bf0] focus:ring-0">
-            <span class="${t.done ? 'line-through text-gray-400' : 'text-gray-800'} break-all">${t.text}</span>
+            <span class="${t.done ? 'line-through text-gray-400' : 'text-gray-800'} break-all font-medium">${t.text}</span>
           </label>
-          <button onclick="deleteTodo(${i})" class="text-gray-400 hover:text-red-500 font-bold px-1 transition" title="削除">×</button>
+          <button onclick="deleteTodo(${i})" class="text-gray-300 hover:text-red-500 font-bold px-1 transition" title="削除">×</button>
         `;
         container.appendChild(item);
       });
-    }
-
-    function addTodo() {
-      const inp = document.getElementById('new-todo-input');
-      const val = inp.value.trim();
-      if (!val) return;
-      todos.push({ text: val, done: false });
-      inp.value = '';
-      renderTodos();
-      updateMyFirestoreState({ todos });
     }
 
     function deleteTodo(index) {
@@ -842,7 +1077,7 @@
       updateMyFirestoreState({ isTodoPublic: isPub });
     }
 
-    // ================= メンバー一覧（個別アコーディオン） =================
+    // ================= メンバー表示 =================
     function toggleMemberDetail(memberId) {
       expandedMembers[memberId] = !expandedMembers[memberId];
       renderMembers();
@@ -852,14 +1087,28 @@
       const container = document.getElementById('members-container');
       container.innerHTML = '';
 
-      remoteMembers.forEach((m) => {
+      const sortedMembers = [...remoteMembers].sort((a, b) => {
+        if (a.id === myId) return -1;
+        if (b.id === myId) return 1;
+        return 0;
+      });
+
+      sortedMembers.forEach((m) => {
         const isMe = m.id === myId;
         const card = document.createElement('div');
-        card.className = "p-3 rounded-xl border border-gray-200 bg-white flex flex-col gap-2 shadow-xs";
+        card.className = "p-3 rounded-2xl border border-gray-100 bg-white flex flex-col gap-2 shadow-xs";
         
         const isWorking = m.status === '作業中';
-        const isExpanded = !!expandedMembers[m.id]; // デフォルト非表示
+        const isPaused = m.status === '一時停止中';
+        const isExpanded = !!expandedMembers[m.id];
         const memberTodos = m.todos || [];
+
+        let badgeClass = "bg-gray-100 text-gray-600";
+        if (isWorking) {
+          badgeClass = "bg-emerald-50 text-emerald-600";
+        } else if (isPaused || m.status === '休憩中') {
+          badgeClass = "bg-amber-50 text-amber-600";
+        }
 
         card.innerHTML = `
           <div class="flex justify-between items-center">
@@ -868,16 +1117,15 @@
               <span class="font-bold text-xs text-gray-900">${m.name || '作業者'} ${isMe ? '(自分)' : ''}</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${isWorking ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}">${m.status || '待機中'}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${badgeClass}">${m.status || '待機中'}</span>
               <button onclick="toggleMemberDetail('${m.id}')" class="text-gray-400 hover:text-gray-700 text-xs px-1" title="詳細切替">
                 ${isExpanded ? '▲' : '▼'}
               </button>
             </div>
           </div>
 
-          <!-- カメラ & 画面共有の横並び -->
-          <div class="grid grid-cols-2 gap-2 h-20">
-            <div class="bg-[#eff3f4] border border-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden text-[10px] text-gray-400 font-medium">
+          <div class="grid grid-cols-2 gap-2 h-24 md:h-28">
+            <div class="bg-[#f7f9f9] border border-gray-100 rounded-xl flex items-center justify-center relative overflow-hidden text-[10px] text-gray-400 font-medium">
               ${isMe && isCameraOn 
                 ? `<video id="active-local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>` 
                 : (!isMe && m.isCamera && remoteStreams[m.id]
@@ -885,7 +1133,7 @@
                   : `<span>${m.isCamera ? '受信中...' : 'カメラOFF'}</span>`)}
             </div>
 
-            <div class="bg-[#eff3f4] border border-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden text-[10px] text-gray-400 font-medium">
+            <div class="bg-[#f7f9f9] border border-gray-100 rounded-xl flex items-center justify-center relative overflow-hidden text-[10px] text-gray-400 font-medium">
               ${isMe && isScreenSharing 
                 ? `<video id="active-screen-video" autoplay playsinline muted class="w-full h-full object-cover"></video>` 
                 : (!isMe && m.isScreen && remoteStreams[m.id]
@@ -894,7 +1142,6 @@
             </div>
           </div>
 
-          <!-- 個別アコーディオン詳細（ToDo全件 ＆ 作業時間） -->
           <div class="${isExpanded ? 'block' : 'hidden'} text-[11px] text-gray-500 pt-2 border-t border-gray-100 space-y-1.5">
             <div><span class="text-gray-400 font-medium">作業時間:</span> <span class="text-gray-800 font-bold">${m.focusTime || '0分'}</span></div>
             <div>
@@ -936,7 +1183,6 @@
       });
     }
 
-    // ================= 最新5件のティッカー通知 =================
     function pushTicker(msg) {
       if (!currentRoom) return;
       db.collection('rooms').doc(currentRoom.id).collection('tickers').add({
@@ -962,7 +1208,22 @@
         });
     }
 
-    // ================= ライブチャット（YouTubeライブ風） =================
+    // ================= 休憩チャット制御（作業中は完全ロック） =================
+    function updateChatAccessibility() {
+      const lockedCover = document.getElementById('chat-locked-cover');
+      const activeContainer = document.getElementById('chat-active-container');
+
+      // 作業中（タイマー稼働中 かつ 休憩ではない）は確実にロック画面を表示
+      if (isRunning && !isBreak) {
+        lockedCover.classList.remove('hidden');
+        activeContainer.classList.add('hidden');
+      } else {
+        // 休憩中 または 一時停止中はチャットを開放
+        lockedCover.classList.add('hidden');
+        activeContainer.classList.remove('hidden');
+      }
+    }
+
     function listenLiveChat() {
       unsubscribeChat = db.collection('rooms').doc(currentRoom.id).collection('chats')
         .orderBy('timestamp', 'asc').limitToLast(50)
@@ -980,23 +1241,10 @@
         });
     }
 
-    function sendChatMessage() {
-      const inp = document.getElementById('live-chat-input');
-      const val = inp.value.trim();
-      if (!val || !currentRoom) return;
-
-      db.collection('rooms').doc(currentRoom.id).collection('chats').add({
-        sender: myName,
-        text: val,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      inp.value = '';
-    }
-
     function copyRoomLink() {
       const shareUrl = `${window.location.origin}${window.location.pathname}?room=${currentRoom.id}`;
       navigator.clipboard.writeText(shareUrl);
-      alert('招待リンクをコピーしました！このURLから直接部屋に入室できます。');
+      alert('招待リンクをコピーしました！');
     }
   </script>
 </body>
