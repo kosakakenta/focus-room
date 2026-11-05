@@ -5,32 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CoFocus - 集中作業ルーム</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#ffffff">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color: #0b0f19; color: #f1f5f9; }
-    .custom-scroll::-webkit-scrollbar { width: 6px; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    body { background-color: #ffffff; color: #0f1419; }
+    .custom-scroll::-webkit-scrollbar { width: 5px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cfd9de; border-radius: 3px; }
   </style>
 </head>
-<body class="font-sans antialiased min-h-screen flex flex-col">
+<body class="font-sans antialiased min-h-screen flex flex-col bg-white text-[#0f1419]">
 
   <!-- ================= 1. 部屋一覧 & 作成画面 ================= -->
   <div id="lobby-view" class="max-w-4xl mx-auto w-full p-6 flex-1 flex flex-col">
-    <div class="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
+    <div class="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
       <div>
-        <h1 class="text-2xl font-bold text-white tracking-wide">CoFocus</h1>
-        <p class="text-sm text-slate-400">同じ目標の仲間と集中するスペース</p>
+        <h1 class="text-2xl font-bold tracking-tight text-gray-900">CoFocus</h1>
+        <p class="text-xs text-gray-500 mt-0.5">同じ目標を持つ仲間と集中するスペース</p>
       </div>
-      <button onclick="openCreateModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg transition">
+      <button onclick="openCreateModal()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white text-sm font-bold px-4 py-2 rounded-full transition shadow-sm">
         ＋ 部屋を作成
       </button>
     </div>
 
     <!-- 検索バー -->
-    <div class="mb-6 flex gap-3">
+    <div class="mb-6">
       <input type="text" id="tag-search" oninput="renderRooms()" placeholder="タグや部屋名で検索（例: TOEIC, 卒論）" 
-             class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+             class="w-full bg-[#eff3f4] border border-transparent focus:border-[#1d9bf0] focus:bg-white rounded-full px-4 py-2 text-sm outline-none transition">
     </div>
 
     <!-- 部屋カード一覧 -->
@@ -38,132 +38,161 @@
   </div>
 
   <!-- ================= 2. 部屋作成モーダル ================= -->
-  <div id="create-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-md">
-      <h3 class="text-lg font-bold mb-4">新規ルーム作成</h3>
-      <div class="space-y-4">
+  <div id="create-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-xl">
+      <h3 class="text-base font-bold text-gray-900 mb-4">新規ルーム作成</h3>
+      <div class="space-y-4 text-xs">
         <div>
-          <label class="block text-xs text-slate-400 mb-1">部屋名（必須）</label>
-          <input type="text" id="new-room-name" placeholder="例: TOEIC 800点を目指す会" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+          <label class="block font-semibold text-gray-600 mb-1">部屋名（必須）</label>
+          <input type="text" id="new-room-name" placeholder="例: TOEIC 800点を目指す会" class="w-full bg-[#eff3f4] border border-gray-200 rounded-lg p-2.5 outline-none focus:border-[#1d9bf0] focus:bg-white">
         </div>
         <div>
-          <label class="block text-xs text-slate-400 mb-1">目標タグ（スペース区切り）</label>
-          <input type="text" id="new-room-tags" placeholder="TOEIC 英語 勉強" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+          <label class="block font-semibold text-gray-600 mb-1">目標タグ（スペース区切り）</label>
+          <input type="text" id="new-room-tags" placeholder="TOEIC 英語 勉強" class="w-full bg-[#eff3f4] border border-gray-200 rounded-lg p-2.5 outline-none focus:border-[#1d9bf0] focus:bg-white">
         </div>
         <div>
-          <label class="block text-xs text-slate-400 mb-1">公開設定</label>
-          <select id="new-room-visibility" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+          <label class="block font-semibold text-gray-600 mb-1">公開設定</label>
+          <select id="new-room-visibility" class="w-full bg-[#eff3f4] border border-gray-200 rounded-lg p-2.5 outline-none focus:border-[#1d9bf0]">
             <option value="public">公開（一覧に表示）</option>
             <option value="link">リンク限定</option>
           </select>
         </div>
       </div>
       <div class="flex justify-end gap-2 mt-6">
-        <button onclick="closeCreateModal()" class="px-4 py-2 rounded text-slate-400 hover:text-white text-sm">キャンセル</button>
-        <button onclick="createRoom()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded text-white text-sm font-medium">作成して入室</button>
+        <button onclick="closeCreateModal()" class="px-4 py-2 rounded-full text-gray-500 hover:bg-gray-100 text-xs font-semibold">キャンセル</button>
+        <button onclick="createRoom()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] px-4 py-2 rounded-full text-white text-xs font-bold transition">作成して入室</button>
       </div>
     </div>
   </div>
 
-  <!-- ================= 3. 入室前ToDoモーダル ================= -->
-  <div id="entry-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-md">
-      <h3 class="text-lg font-bold mb-2">作業準備</h3>
-      <p class="text-xs text-slate-400 mb-4">最初のToDoを設定してください（スキップ可能）</p>
-      <input type="text" id="initial-todo" placeholder="例: 単語帳セクション3を周回する" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm mb-4">
-      <div class="flex justify-end gap-2">
-        <button onclick="confirmEntry(true)" class="px-4 py-2 rounded text-slate-400 hover:text-white text-sm">スキップ</button>
-        <button onclick="confirmEntry(false)" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded text-white text-sm font-medium">集中開始</button>
+  <!-- ================= 3. 入室前ToDo複数設定モーダル ================= -->
+  <div id="entry-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-xl flex flex-col max-h-[85vh]">
+      <h3 class="text-base font-bold text-gray-900 mb-1">作業準備</h3>
+      <p class="text-xs text-gray-500 mb-4">この部屋でやるToDoリストをあらかじめ登録できます</p>
+      
+      <!-- 入室前ToDoリスト -->
+      <div id="pre-entry-todo-list" class="space-y-2 overflow-y-auto custom-scroll mb-3 max-h-48 pr-1"></div>
+
+      <div class="flex gap-2 mb-4">
+        <input type="text" id="pre-entry-input" onkeydown="if(event.key==='Enter') addPreEntryTodo()" placeholder="ToDoを入力して追加..." class="flex-1 bg-[#eff3f4] border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#1d9bf0] focus:bg-white">
+        <button onclick="addPreEntryTodo()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold px-3 py-2 rounded-lg transition">追加</button>
+      </div>
+
+      <div class="flex justify-end gap-2 border-t border-gray-100 pt-3">
+        <button onclick="confirmEntry()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] px-5 py-2 rounded-full text-white text-xs font-bold transition">部屋に入る</button>
       </div>
     </div>
   </div>
 
   <!-- ================= 4. 集中メイン画面 (ワイヤーフレーム準拠) ================= -->
   <div id="room-view" class="hidden flex-1 flex flex-col h-screen">
-    <!-- Top Header -->
-    <header class="h-14 border-b border-slate-800 px-6 flex justify-between items-center bg-slate-900/60 backdrop-blur">
-      <button onclick="leaveRoom()" class="text-sm font-medium text-slate-400 hover:text-rose-400 transition">← 退出</button>
-      <div class="flex items-center gap-4 text-xs">
-        <span id="room-count-badge" class="bg-slate-800 px-3 py-1 rounded-full text-slate-300">5 / 11人が参加中</span>
-        <button onclick="copyRoomLink()" class="hover:text-indigo-400 transition">リンクをコピー</button>
-        <button id="camera-toggle-btn" onclick="toggleCamera()" class="border border-slate-700 px-3 py-1 rounded hover:bg-slate-800 transition">カメラ OFF</button>
+    <!-- ヘッダー -->
+    <header class="h-14 border-b border-gray-200 px-6 flex justify-between items-center bg-white sticky top-0 z-10">
+      <button onclick="leaveRoom()" class="text-xs font-bold text-gray-500 hover:text-red-500 transition">← 退出</button>
+      
+      <!-- 何人作業中かだけ表示 -->
+      <div class="flex items-center gap-3">
+        <span id="active-working-count" class="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+          ● 2人が集中作業中
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="copyRoomLink()" class="text-xs text-gray-600 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-full transition font-medium">リンクをコピー</button>
+        <button id="screen-share-btn" onclick="toggleScreenShare()" class="text-xs border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-full transition font-medium">画面共有</button>
+        <button id="camera-toggle-btn" onclick="toggleCamera()" class="text-xs border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-full transition font-medium">カメラ OFF</button>
       </div>
     </header>
 
-    <!-- Main 3 Columns Layout -->
-    <div class="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
+    <!-- 3カラムレイアウト -->
+    <div class="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden bg-white">
       
       <!-- 左カラム: ルーム情報 & ToDoリスト -->
-      <div class="md:col-span-3 border-r border-slate-800 p-5 flex flex-col custom-scroll overflow-y-auto">
-        <div class="mb-6">
-          <span id="current-room-vis" class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-indigo-300">公開</span>
-          <h2 id="current-room-name" class="text-lg font-bold mt-2 text-white">TOEIC 800点を目指す会</h2>
-          <div id="current-room-tags" class="text-xs text-indigo-400/80 mt-1 space-x-1"># TOEIC # 英語</div>
+      <div class="md:col-span-3 border-r border-gray-200 p-5 flex flex-col custom-scroll overflow-y-auto">
+        <div class="mb-5 pb-4 border-b border-gray-100">
+          <span id="current-room-vis" class="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-600">公開</span>
+          <h2 id="current-room-name" class="text-base font-bold mt-1 text-gray-900 leading-snug">TOEIC 800点を目指す会</h2>
+          <div id="current-room-tags" class="text-xs text-[#1d9bf0] mt-1 space-x-1 font-medium"># TOEIC # 英語</div>
         </div>
 
-        <div class="bg-slate-800/40 p-3 rounded-lg border border-slate-800 mb-6">
-          <div class="text-xs text-slate-400">この部屋で集中した時間</div>
-          <div id="total-focus-time" class="text-xl font-bold text-indigo-400 mt-1">0分</div>
+        <div class="bg-[#f7f9f9] p-3 rounded-xl border border-gray-100 mb-5">
+          <div class="text-[11px] text-gray-500">この部屋で集中した時間</div>
+          <div id="total-focus-time" class="text-xl font-bold text-gray-900 mt-0.5">0分</div>
         </div>
 
         <!-- ToDo Section -->
         <div class="flex-1 flex flex-col">
           <div class="flex justify-between items-center mb-3">
-            <span class="text-sm font-semibold text-slate-200">ToDoリスト</span>
-            <label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
-              <input type="checkbox" id="todo-public-toggle" checked onchange="toggleTodoVisibility()" class="rounded bg-slate-800 border-slate-700"> 公開
+            <span class="text-xs font-bold text-gray-700">ToDoリスト</span>
+            <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+              <input type="checkbox" id="todo-public-toggle" checked onchange="toggleTodoVisibility()" class="rounded border-gray-300 text-[#1d9bf0] focus:ring-0"> 公開
             </label>
           </div>
 
-          <div id="todo-list" class="space-y-2 mb-4"></div>
+          <div id="todo-list" class="space-y-2 mb-3"></div>
 
           <div class="flex gap-2 mt-auto pt-2">
-            <input type="text" id="new-todo-input" placeholder="ToDoを追加..." class="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs">
-            <button onclick="addTodo()" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded text-xs font-bold">＋</button>
+            <input type="text" id="new-todo-input" onkeydown="if(event.key==='Enter') addTodo()" placeholder="ToDoを追加..." class="flex-1 bg-[#eff3f4] border border-transparent focus:border-[#1d9bf0] focus:bg-white rounded-lg px-3 py-1.5 text-xs outline-none">
+            <button onclick="addTodo()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white px-3 py-1.5 rounded-lg text-xs font-bold transition">＋</button>
           </div>
         </div>
       </div>
 
-      <!-- 中央カラム: ポモドーロタイマー & 通知 -->
-      <div class="md:col-span-5 flex flex-col items-center justify-between p-8 border-r border-slate-800 bg-slate-950/40 relative">
-        <div class="w-full flex justify-center gap-2">
-          <button onclick="setTime(25)" class="text-xs px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">25分</button>
-          <button onclick="setTime(50)" class="text-xs px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">50分</button>
-          <button onclick="setTime(5)" class="text-xs px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">休憩 5分</button>
+      <!-- 中央カラム: 自由入力ポモドーロタイマー & リアルタイム通知 -->
+      <div class="md:col-span-5 flex flex-col items-center justify-between p-6 border-r border-gray-200 bg-[#f7f9f9]/40 relative">
+        <!-- 自由入力フォーム -->
+        <div class="w-full bg-white border border-gray-200 rounded-xl p-3 flex justify-around items-center text-xs shadow-sm">
+          <div class="flex items-center gap-1.5">
+            <span class="text-gray-500 font-medium">作業</span>
+            <input type="number" id="custom-work-mins" value="25" min="1" max="180" class="w-12 border border-gray-300 rounded px-1.5 py-0.5 text-center font-bold">
+            <span class="text-gray-500">分</span>
+          </div>
+          <div class="h-4 w-px bg-gray-200"></div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-gray-500 font-medium">休憩</span>
+            <input type="number" id="custom-break-mins" value="5" min="1" max="60" class="w-12 border border-gray-300 rounded px-1.5 py-0.5 text-center font-bold">
+            <span class="text-gray-500">分</span>
+          </div>
+          <button onclick="applyCustomTime()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded font-bold text-xs transition">適用</button>
         </div>
 
-        <!-- Timer Circle/Display -->
+        <!-- タイマー表示本体 -->
         <div class="flex flex-col items-center justify-center my-auto">
-          <span id="timer-state-label" class="text-xs uppercase tracking-widest text-indigo-400 font-semibold mb-2">作業中</span>
-          <div id="timer-display" class="text-7xl font-mono font-bold tracking-tight text-white mb-6">25:00</div>
+          <span id="timer-state-label" class="text-xs tracking-widest text-[#1d9bf0] font-bold mb-2">作業中</span>
+          <div id="timer-display" class="text-7xl font-mono font-bold tracking-tight text-gray-900 mb-6">25:00</div>
           
           <div class="flex gap-3">
-            <button id="timer-start-btn" onclick="toggleTimer()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-8 py-2.5 rounded-lg text-sm shadow-lg shadow-indigo-600/30 transition">
+            <button id="timer-start-btn" onclick="toggleTimer()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold px-8 py-2.5 rounded-full text-xs transition shadow">
               スタート
             </button>
-            <button onclick="resetTimer()" class="border border-slate-700 hover:bg-slate-800 text-slate-300 px-4 py-2.5 rounded-lg text-sm transition">
+            <button onclick="resetTimer()" class="border border-gray-300 hover:bg-gray-100 text-gray-700 px-5 py-2.5 rounded-full text-xs font-bold transition">
               リセット
             </button>
           </div>
         </div>
 
         <!-- リアルタイム通知バー -->
-        <div class="w-full bg-slate-900/90 border border-slate-800 rounded-lg p-3 min-h-[44px] flex items-center">
-          <div id="ticker" class="text-xs text-slate-300 truncate w-full">💡 ルームに参加しました</div>
+        <div class="w-full bg-white border border-gray-200 rounded-xl p-3 min-h-[44px] flex items-center shadow-sm">
+          <div id="ticker" class="text-xs text-gray-600 truncate w-full font-medium">💡 ルームに参加しました</div>
         </div>
       </div>
 
-      <!-- 右カラム: メンバー一覧 & 休憩コメント -->
+      <!-- 右カラム: メンバー一覧 & カメラ・画面共有横並び -->
       <div class="md:col-span-4 p-5 flex flex-col custom-scroll overflow-y-auto">
-        <h3 class="text-sm font-semibold text-slate-300 mb-3">参加メンバー</h3>
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-xs font-bold text-gray-700">メンバー</h3>
+          <button onclick="toggleDetailsAll()" id="collapse-all-btn" class="text-[11px] text-[#1d9bf0] hover:underline font-semibold">詳細を隠す</button>
+        </div>
+
         <div id="members-container" class="space-y-3 flex-1 overflow-y-auto pr-1"></div>
 
         <!-- 休憩時コメント入力フォーム -->
-        <div id="break-comment-box" class="mt-4 pt-3 border-t border-slate-800 hidden">
-          <label class="block text-xs text-slate-400 mb-1">休憩コメント（任意）</label>
+        <div id="break-comment-box" class="mt-4 pt-3 border-t border-gray-200 hidden">
+          <label class="block text-[11px] font-semibold text-gray-500 mb-1">休憩コメント（任意）</label>
           <div class="flex gap-2">
-            <input type="text" id="break-comment-input" placeholder="ちょっとストレッチ..." class="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-1 text-xs">
-            <button onclick="postBreakComment()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1 rounded text-white">送信</button>
+            <input type="text" id="break-comment-input" onkeydown="if(event.key==='Enter') postBreakComment()" placeholder="ストレッチ中..." class="flex-1 bg-[#eff3f4] border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none">
+            <button onclick="postBreakComment()" class="bg-gray-800 hover:bg-black text-xs px-3 py-1.5 rounded-lg text-white font-bold transition">送信</button>
           </div>
         </div>
       </div>
@@ -171,37 +200,42 @@
     </div>
   </div>
 
-  <!-- Video Hidden / Inline container for local camera -->
-  <video id="local-video" autoplay playsinline muted class="hidden"></video>
-
   <script>
     // 状態管理
     let rooms = [
-      { id: '1', name: 'TOEIC 800点を目指す会', tags: ['TOEIC', '英語'], visibility: 'public', currentCount: 4, maxCount: 11 },
-      { id: '2', name: '大学院 卒論追い込み部屋', tags: ['卒論', '研究'], visibility: 'public', currentCount: 2, maxCount: 6 }
+      { id: '1', name: 'TOEIC 800点を目指す会', tags: ['TOEIC', '英語'], visibility: 'public' },
+      { id: '2', name: '大学院 卒論追い込み部屋', tags: ['卒論', '研究'], visibility: 'public' }
     ];
 
     let currentRoom = null;
     let timerInterval = null;
+    let workDuration = 25 * 60;
+    let breakDuration = 5 * 60;
     let timeLeft = 25 * 60;
     let isRunning = false;
     let isBreak = false;
     let focusMinutesTotal = 0;
     let todos = [];
-    let isCameraOn = false;
-    let mediaStream = null;
+    let preEntryTodos = [];
+    let hideAllDetails = false;
 
-    // ダミーメンバー
+    // メディア
+    let isCameraOn = false;
+    let isScreenSharing = false;
+    let cameraStream = null;
+    let screenStream = null;
+
+    // メンバー
     let members = [
-      { id: 'm1', name: 'あなた (自分)', status: '作業中', isMe: true, isCamera: false, currentTodo: '', isTodoPublic: true, focusTime: '0分' },
-      { id: 'm2', name: 'Taro', status: '作業中', isMe: false, isCamera: false, currentTodo: '公式問題集 Part5 30問', isTodoPublic: true, focusTime: '50分' },
-      { id: 'm3', name: 'Ken', status: '休憩中', isMe: false, isCamera: false, currentTodo: '非公開', isTodoPublic: false, focusTime: '25分', comment: 'コーヒー淹れてきます' }
+      { id: 'm1', name: 'あなた (自分)', status: '休憩中', isMe: true, isCamera: false, isScreen: false, currentTodo: '', isTodoPublic: true, focusTime: '0分' },
+      { id: 'm2', name: 'Taro', status: '作業中', isMe: false, isCamera: false, isScreen: false, currentTodo: '公式問題集 Part5 30問', isTodoPublic: true, focusTime: '50分' },
+      { id: 'm3', name: 'Ken', status: '作業中', isMe: false, isCamera: false, isScreen: false, currentTodo: '単語暗記 100語', isTodoPublic: true, focusTime: '25分', comment: '' }
     ];
 
-    // 初期化
     window.onload = () => {
       if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
       renderRooms();
+      updateWorkingCount();
     };
 
     function renderRooms() {
@@ -211,20 +245,19 @@
 
       rooms.filter(r => r.name.toLowerCase().includes(q) || r.tags.some(t => t.toLowerCase().includes(q))).forEach(r => {
         const card = document.createElement('div');
-        card.className = "bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-5 rounded-xl transition cursor-pointer flex flex-col justify-between";
+        card.className = "bg-white border border-gray-200 hover:border-[#1d9bf0] p-5 rounded-2xl transition cursor-pointer flex flex-col justify-between shadow-sm";
         card.onclick = () => selectRoom(r.id);
         card.innerHTML = `
           <div>
             <div class="flex justify-between items-start mb-2">
-              <span class="text-xs px-2 py-0.5 rounded ${r.visibility === 'public' ? 'bg-indigo-950 text-indigo-400' : 'bg-slate-800 text-slate-400'}">${r.visibility === 'public' ? '公開' : 'リンク限定'}</span>
-              <span class="text-xs text-slate-400">${r.currentCount} / ${r.maxCount}人</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded ${r.visibility === 'public' ? 'bg-blue-50 text-[#1d9bf0]' : 'bg-gray-100 text-gray-500'}">${r.visibility === 'public' ? '公開' : 'リンク限定'}</span>
             </div>
-            <h4 class="font-bold text-base text-white mb-2">${r.name}</h4>
+            <h4 class="font-bold text-sm text-gray-900 mb-1">${r.name}</h4>
             <div class="flex gap-1 flex-wrap">
-              ${r.tags.map(t => `<span class="text-xs text-slate-400">#${t}</span>`).join(' ')}
+              ${r.tags.map(t => `<span class="text-xs text-gray-400">#${t}</span>`).join(' ')}
             </div>
           </div>
-          <button class="mt-4 w-full bg-slate-800 hover:bg-indigo-600 text-xs py-2 rounded text-slate-200 hover:text-white transition">参加する</button>
+          <button class="mt-4 w-full bg-[#eff3f4] hover:bg-[#1d9bf0] hover:text-white text-xs py-2 rounded-full font-bold text-gray-800 transition">入室する</button>
         `;
         list.appendChild(card);
       });
@@ -238,23 +271,53 @@
       if (!name) return alert('部屋名を入力してください');
       const tags = document.getElementById('new-room-tags').value.split(' ').filter(Boolean);
       const vis = document.getElementById('new-room-visibility').value;
-      const newRoom = { id: Date.now().toString(), name, tags, visibility: vis, currentCount: 1, maxCount: 11 };
+      const newRoom = { id: Date.now().toString(), name, tags, visibility: vis };
       rooms.unshift(newRoom);
       closeCreateModal();
       selectRoom(newRoom.id);
     }
 
+    // 入室前フロー（複数ToDo登録対応）
     function selectRoom(roomId) {
       currentRoom = rooms.find(r => r.id === roomId);
+      preEntryTodos = [];
+      renderPreEntryTodos();
       document.getElementById('entry-modal').classList.remove('hidden');
     }
 
-    function confirmEntry(skip) {
-      const initial = document.getElementById('initial-todo').value.trim();
+    function addPreEntryTodo() {
+      const inp = document.getElementById('pre-entry-input');
+      const val = inp.value.trim();
+      if (!val) return;
+      preEntryTodos.push(val);
+      inp.value = '';
+      renderPreEntryTodos();
+    }
+
+    function removePreEntryTodo(idx) {
+      preEntryTodos.splice(idx, 1);
+      renderPreEntryTodos();
+    }
+
+    function renderPreEntryTodos() {
+      const list = document.getElementById('pre-entry-todo-list');
+      list.innerHTML = '';
+      preEntryTodos.forEach((t, i) => {
+        const div = document.createElement('div');
+        div.className = "flex justify-between items-center bg-[#eff3f4] px-3 py-1.5 rounded-lg text-xs";
+        div.innerHTML = `
+          <span class="truncate flex-1">${t}</span>
+          <button onclick="removePreEntryTodo(${i})" class="text-gray-400 hover:text-red-500 font-bold ml-2">×</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function confirmEntry() {
       document.getElementById('entry-modal').classList.add('hidden');
-      if (!skip && initial) {
-        todos.push({ text: initial, done: false });
-        members[0].currentTodo = initial;
+      todos = preEntryTodos.map(text => ({ text, done: false }));
+      if (todos.length > 0) {
+        members[0].currentTodo = todos[0].text;
       }
       enterRoom();
     }
@@ -265,61 +328,54 @@
       document.getElementById('current-room-name').innerText = currentRoom.name;
       document.getElementById('current-room-vis').innerText = currentRoom.visibility === 'public' ? '公開' : 'リンク限定';
       document.getElementById('current-room-tags').innerText = currentRoom.tags.map(t => `# ${t}`).join(' ');
-      document.getElementById('room-count-badge').innerText = `${members.length} / ${currentRoom.maxCount}人が参加中`;
+      
+      applyCustomTime();
       renderTodos();
       renderMembers();
+      updateWorkingCount();
     }
 
     function leaveRoom() {
       stopCamera();
+      stopScreenShare();
       clearInterval(timerInterval);
       document.getElementById('room-view').classList.add('hidden');
       document.getElementById('lobby-view').classList.remove('hidden');
       renderRooms();
     }
 
-    // タイマー制御
+    // タイマー関連（自由入力＋停止で休憩モードへ）
+    function applyCustomTime() {
+      const wMins = parseInt(document.getElementById('custom-work-mins').value) || 25;
+      const bMins = parseInt(document.getElementById('custom-break-mins').value) || 5;
+      workDuration = wMins * 60;
+      breakDuration = bMins * 60;
+      
+      if (!isRunning) {
+        timeLeft = isBreak ? breakDuration : workDuration;
+        updateTimerDisplay();
+      }
+    }
+
     function updateTimerDisplay() {
       const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
       const s = (timeLeft % 60).toString().padStart(2, '0');
       document.getElementById('timer-display').innerText = `${m}:${s}`;
     }
 
-    function setTime(mins) {
-      clearInterval(timerInterval);
-      isRunning = false;
-      document.getElementById('timer-start-btn').innerText = 'スタート';
-      timeLeft = mins * 60;
-      isBreak = mins === 5;
-      
-      const label = document.getElementById('timer-state-label');
-      const breakBox = document.getElementById('break-comment-box');
-      if (isBreak) {
-        label.innerText = '休憩中';
-        label.className = 'text-xs uppercase tracking-widest text-amber-400 font-semibold mb-2';
-        breakBox.classList.remove('hidden');
-        members[0].status = '休憩中';
-        // 休憩中強制カメラOFF
-        if (isCameraOn) toggleCamera();
-      } else {
-        label.innerText = '作業中';
-        label.className = 'text-xs uppercase tracking-widest text-indigo-400 font-semibold mb-2';
-        breakBox.classList.add('hidden');
-        members[0].status = '作業中';
-      }
-      renderMembers();
-      updateTimerDisplay();
-    }
-
     function toggleTimer() {
       if (isRunning) {
+        // 作業中にタイマーを止めたら自動で「休憩中」へ遷移
         clearInterval(timerInterval);
         isRunning = false;
-        document.getElementById('timer-start-btn').innerText = '再開';
+        switchToBreak();
       } else {
+        // スタート
+        switchToWork();
         isRunning = true;
-        document.getElementById('timer-start-btn').innerText = '一時停止';
+        document.getElementById('timer-start-btn').innerText = '停止 (休憩へ)';
         pushTicker(`🎯 ${members[0].name} が集中を開始しました`);
+        
         timerInterval = setInterval(() => {
           if (timeLeft > 0) {
             timeLeft--;
@@ -333,28 +389,75 @@
           } else {
             clearInterval(timerInterval);
             isRunning = false;
-            pushTicker(`🎉 1セット完了しました！お疲れ様でした。`);
-            alert(isBreak ? '休憩終了です！' : 'セット完了！休憩に入りましょう。');
-            setTime(isBreak ? 25 : 5);
+            if (!isBreak) {
+              pushTicker(`🎉 1セット完了！休憩に入りましょう。`);
+              alert('セット完了！休憩に入りましょう。');
+              switchToBreak();
+            } else {
+              pushTicker(`☕ 休憩終了！次のセットを始めましょう。`);
+              alert('休憩終了です！');
+              switchToWork();
+            }
           }
         }, 1000);
       }
     }
 
-    function resetTimer() {
-      setTime(25);
+    function switchToBreak() {
+      isBreak = true;
+      timeLeft = breakDuration;
+      document.getElementById('timer-state-label').innerText = '休憩中';
+      document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-amber-500 font-bold mb-2';
+      document.getElementById('timer-start-btn').innerText = '集中を再開';
+      document.getElementById('break-comment-box').classList.remove('hidden');
+      members[0].status = '休憩中';
+      
+      // 休憩中はカメラを強制停止
+      if (isCameraOn) stopCamera();
+
+      updateTimerDisplay();
+      renderMembers();
+      updateWorkingCount();
     }
 
-    // ToDo機能
+    function switchToWork() {
+      isBreak = false;
+      timeLeft = workDuration;
+      document.getElementById('timer-state-label').innerText = '作業中';
+      document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-[#1d9bf0] font-bold mb-2';
+      document.getElementById('timer-start-btn').innerText = 'スタート';
+      document.getElementById('break-comment-box').classList.add('hidden');
+      members[0].status = '作業中';
+
+      updateTimerDisplay();
+      renderMembers();
+      updateWorkingCount();
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      isRunning = false;
+      switchToWork();
+    }
+
+    function updateWorkingCount() {
+      const working = members.filter(m => m.status === '作業中').length;
+      document.getElementById('active-working-count').innerText = `● ${working}人が集中作業中`;
+    }
+
+    // ToDo管理（削除機能付き）
     function renderTodos() {
       const container = document.getElementById('todo-list');
       container.innerHTML = '';
       todos.forEach((t, i) => {
         const item = document.createElement('div');
-        item.className = "flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded text-xs";
+        item.className = "flex items-center justify-between p-2.5 bg-[#eff3f4] rounded-lg text-xs group";
         item.innerHTML = `
-          <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodoDone(${i})" class="rounded bg-slate-800 border-slate-700">
-          <span class="${t.done ? 'line-through text-slate-500' : 'text-slate-200'} flex-1 break-all">${t.text}</span>
+          <label class="flex items-center gap-2 flex-1 cursor-pointer truncate mr-2">
+            <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTodoDone(${i})" class="rounded border-gray-300 text-[#1d9bf0] focus:ring-0">
+            <span class="${t.done ? 'line-through text-gray-400' : 'text-gray-800'} break-all">${t.text}</span>
+          </label>
+          <button onclick="deleteTodo(${i})" class="text-gray-400 hover:text-red-500 font-bold px-1 transition" title="削除">×</button>
         `;
         container.appendChild(item);
       });
@@ -366,7 +469,14 @@
       if (!val) return;
       todos.push({ text: val, done: false });
       inp.value = '';
-      members[0].currentTodo = val;
+      if (!members[0].currentTodo) members[0].currentTodo = val;
+      renderTodos();
+      renderMembers();
+    }
+
+    function deleteTodo(index) {
+      todos.splice(index, 1);
+      members[0].currentTodo = todos.length > 0 ? todos[0].text : '';
       renderTodos();
       renderMembers();
     }
@@ -374,61 +484,83 @@
     function toggleTodoDone(index) {
       todos[index].done = !todos[index].done;
       if (todos[index].done) {
-        pushTicker(`✅ ${members[0].name} がタスク「${todos[index].text}」を達成しました！`);
+        pushTicker(`✅ ${members[0].name} が「${todos[index].text}」を完了しました！`);
       }
       renderTodos();
     }
 
     function toggleTodoVisibility() {
-      const isPub = document.getElementById('todo-public-toggle').checked;
-      members[0].isTodoPublic = isPub;
+      members[0].isTodoPublic = document.getElementById('todo-public-toggle').checked;
       renderMembers();
     }
 
-    // メンバーレンダリング
+    // 折りたたみトグル
+    function toggleDetailsAll() {
+      hideAllDetails = !hideAllDetails;
+      document.getElementById('collapse-all-btn').innerText = hideAllDetails ? '詳細を表示' : '詳細を隠す';
+      renderMembers();
+    }
+
+    // メンバー描画（カメラ＆画面共有の横並び配置）
     function renderMembers() {
       const container = document.getElementById('members-container');
       container.innerHTML = '';
 
       members.forEach((m) => {
         const card = document.createElement('div');
-        card.className = "p-3 rounded-lg border border-slate-800 bg-slate-900/60 flex flex-col gap-2";
+        card.className = "p-3 rounded-xl border border-gray-200 bg-white flex flex-col gap-2 shadow-xs";
         
         const isWorking = m.status === '作業中';
         const displayTodo = m.isTodoPublic ? (m.currentTodo || '設定なし') : '🔒 非公開';
 
         card.innerHTML = `
           <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full ${isWorking ? 'bg-emerald-400' : 'bg-amber-400'}"></span>
-              <span class="font-medium text-xs text-white">${m.name}</span>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full ${isWorking ? 'bg-emerald-500' : 'bg-amber-400'}"></span>
+              <span class="font-bold text-xs text-gray-900">${m.name}</span>
             </div>
-            <span class="text-[10px] px-1.5 py-0.5 rounded ${isWorking ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400'}">${m.status}</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${isWorking ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}">${m.status}</span>
           </div>
 
-          <!-- Video / Icon preview -->
-          <div class="h-20 bg-slate-950 border border-slate-800 rounded flex items-center justify-center relative overflow-hidden">
-            ${m.isMe && isCameraOn 
-              ? `<video id="active-local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>` 
-              : `<span class="text-xs text-slate-500">${m.isCamera ? 'カメラON' : 'カメラOFF (アイコン)'}</span>`}
+          <!-- カメラ & 画面共有の横並びグリッド -->
+          <div class="grid grid-cols-2 gap-2 h-24">
+            <!-- カメラ枠 -->
+            <div class="bg-[#eff3f4] border border-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden text-[10px] text-gray-400 font-medium">
+              ${m.isMe && isCameraOn 
+                ? `<video id="active-local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>` 
+                : `<span>${m.isCamera ? 'カメラON' : 'カメラOFF'}</span>`}
+            </div>
+
+            <!-- 画面共有枠 -->
+            <div class="bg-[#eff3f4] border border-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden text-[10px] text-gray-400 font-medium">
+              ${m.isMe && isScreenSharing 
+                ? `<video id="active-screen-video" autoplay playsinline muted class="w-full h-full object-cover"></video>` 
+                : `<span>${m.isScreen ? '画面共有中' : '画面共有OFF'}</span>`}
+            </div>
           </div>
 
-          <div class="text-[11px] text-slate-400">
-            <div><span class="text-slate-500">やる事:</span> ${displayTodo}</div>
-            <div><span class="text-slate-500">集中時間:</span> ${m.focusTime}</div>
-            ${m.comment ? `<div class="text-amber-300/80 mt-1">💬 "${m.comment}"</div>` : ''}
+          <!-- やる事・集中時間（折りたたみ可能） -->
+          <div class="${hideAllDetails ? 'hidden' : 'block'} text-[11px] text-gray-500 pt-1 border-t border-gray-100 space-y-0.5">
+            <div><span class="text-gray-400">やる事:</span> <span class="text-gray-700 font-medium">${displayTodo}</span></div>
+            <div><span class="text-gray-400">集中時間:</span> <span class="text-gray-700 font-medium">${m.focusTime}</span></div>
+            ${m.comment ? `<div class="text-amber-600 font-medium mt-1">💬 "${m.comment}"</div>` : ''}
           </div>
         `;
         container.appendChild(card);
       });
 
-      if (isCameraOn && mediaStream) {
+      // ストリームの再バインド
+      if (isCameraOn && cameraStream) {
         const v = document.getElementById('active-local-video');
-        if (v) v.srcObject = mediaStream;
+        if (v) v.srcObject = cameraStream;
+      }
+      if (isScreenSharing && screenStream) {
+        const sv = document.getElementById('active-screen-video');
+        if (sv) sv.srcObject = screenStream;
       }
     }
 
-    // カメラ機能
+    // カメラ機能（休憩中は不可）
     async function toggleCamera() {
       if (isBreak) {
         alert('休憩中はカメラをONにできません');
@@ -437,11 +569,11 @@
       const btn = document.getElementById('camera-toggle-btn');
       if (!isCameraOn) {
         try {
-          mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
           isCameraOn = true;
           members[0].isCamera = true;
           btn.innerText = 'カメラ ON';
-          btn.classList.add('bg-indigo-600', 'text-white');
+          btn.classList.add('bg-gray-900', 'text-white');
         } catch (err) {
           alert('カメラへのアクセスを許可してください');
         }
@@ -452,16 +584,54 @@
     }
 
     function stopCamera() {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-        mediaStream = null;
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
       }
       isCameraOn = false;
       members[0].isCamera = false;
       const btn = document.getElementById('camera-toggle-btn');
       if (btn) {
         btn.innerText = 'カメラ OFF';
-        btn.classList.remove('bg-indigo-600', 'text-white');
+        btn.classList.remove('bg-gray-900', 'text-white');
+      }
+    }
+
+    // 画面共有機能
+    async function toggleScreenShare() {
+      const btn = document.getElementById('screen-share-btn');
+      if (!isScreenSharing) {
+        try {
+          screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+          isScreenSharing = true;
+          members[0].isScreen = true;
+          btn.innerText = '画面共有 ON';
+          btn.classList.add('bg-gray-900', 'text-white');
+
+          screenStream.getVideoTracks()[0].onended = () => {
+            stopScreenShare();
+            renderMembers();
+          };
+        } catch (err) {
+          console.log(err);
+        }
+      } else {
+        stopScreenShare();
+      }
+      renderMembers();
+    }
+
+    function stopScreenShare() {
+      if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop());
+        screenStream = null;
+      }
+      isScreenSharing = false;
+      members[0].isScreen = false;
+      const btn = document.getElementById('screen-share-btn');
+      if (btn) {
+        btn.innerText = '画面共有';
+        btn.classList.remove('bg-gray-900', 'text-white');
       }
     }
 
@@ -476,10 +646,8 @@
       renderMembers();
     }
 
-    // ティッカー通知
     function pushTicker(msg) {
-      const ticker = document.getElementById('ticker');
-      ticker.innerText = msg;
+      document.getElementById('ticker').innerText = msg;
     }
 
     function copyRoomLink() {
