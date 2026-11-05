@@ -104,7 +104,6 @@
     <header class="h-14 border-b border-gray-200 px-6 flex justify-between items-center bg-white sticky top-0 z-10">
       <button onclick="leaveRoom()" class="text-xs font-bold text-gray-500 hover:text-red-500 transition">← 退出</button>
       
-      <!-- 何人作業中かだけ表示 -->
       <div class="flex items-center gap-3">
         <span id="active-working-count" class="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
           ● 0人が集中作業中
@@ -154,7 +153,6 @@
 
       <!-- 中央カラム: 自由入力ポモドーロタイマー & リアルタイム通知 -->
       <div class="md:col-span-5 flex flex-col items-center justify-between p-6 border-r border-gray-200 bg-[#f7f9f9]/40 relative">
-        <!-- 自由入力フォーム -->
         <div class="w-full bg-white border border-gray-200 rounded-xl p-3 flex justify-around items-center text-xs shadow-sm">
           <div class="flex items-center gap-1.5">
             <span class="text-gray-500 font-medium">作業</span>
@@ -170,7 +168,6 @@
           <button onclick="applyCustomTime()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded font-bold text-xs transition">適用</button>
         </div>
 
-        <!-- タイマー表示本体 -->
         <div class="flex flex-col items-center justify-center my-auto">
           <span id="timer-state-label" class="text-xs tracking-widest text-[#1d9bf0] font-bold mb-2">作業中</span>
           <div id="timer-display" class="text-7xl font-mono font-bold tracking-tight text-gray-900 mb-6">25:00</div>
@@ -185,7 +182,6 @@
           </div>
         </div>
 
-        <!-- リアルタイム通知バー -->
         <div class="w-full bg-white border border-gray-200 rounded-xl p-3 min-h-[44px] flex items-center shadow-sm">
           <div id="ticker" class="text-xs text-gray-600 truncate w-full font-medium">💡 ルームに参加しました</div>
         </div>
@@ -200,7 +196,6 @@
 
         <div id="members-container" class="space-y-3 flex-1 overflow-y-auto pr-1"></div>
 
-        <!-- 休憩時コメント入力フォーム -->
         <div id="break-comment-box" class="mt-4 pt-3 border-t border-gray-200 hidden">
           <label class="block text-[11px] font-semibold text-gray-500 mb-1">休憩コメント（任意）</label>
           <div class="flex gap-2">
@@ -228,7 +223,11 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // 自分のクライアントID
+    // WebRTC 設定 (Google 無料 STUN サーバー)
+    const rtcConfig = {
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    };
+
     let myId = localStorage.getItem('focus_user_id');
     if (!myId) {
       myId = 'user_' + Math.random().toString(36).substring(2, 9);
@@ -236,7 +235,6 @@
     }
     let myName = localStorage.getItem('focus_user_name') || '作業者_' + myId.slice(-3);
 
-    // 状態管理
     let rooms = [];
     let currentRoom = null;
     let timerInterval = null;
@@ -251,15 +249,17 @@
     let hideAllDetails = false;
     let remoteMembers = [];
 
-    // メディア
+    // メディア & WebRTC コネクション管理
     let isCameraOn = false;
     let isScreenSharing = false;
     let cameraStream = null;
     let screenStream = null;
+    let peerConnections = {}; // { [remoteUserId]: RTCPeerConnection }
+    let remoteStreams = {};    // { [remoteUserId]: MediaStream }
 
-    // リスナー解除用関数
     let unsubscribeMembers = null;
     let unsubscribeTicker = null;
+    let unsubscribeSignals = null;
 
     window.onload = () => {
       if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
@@ -267,14 +267,12 @@
       listenRooms();
     };
 
-    // ルーム一覧のリアルタイム購読
     function listenRooms() {
       db.collection('rooms').onSnapshot((snapshot) => {
         rooms = [];
         snapshot.forEach((doc) => {
           rooms.push({ id: doc.id, ...doc.data() });
         });
-        // なければデフォルト作成
         if (rooms.length === 0) {
           db.collection('rooms').doc('default_toeic').set({
             name: 'TOEIC 800点を目指す会',
@@ -330,7 +328,6 @@
       selectRoom(docRef.id);
     }
 
-    // 入室前ToDo準備
     function selectRoom(roomId) {
       currentRoom = rooms.find(r => r.id === roomId) || { id: roomId, name: '集中ルーム', tags: [], visibility: 'public' };
       preEntryTodos = [];
@@ -387,7 +384,7 @@
       applyCustomTime();
       renderTodos();
 
-      // Firestoreに自身の参加情報を登録
+      // メンバー同期
       await updateMyFirestoreState({
         name: myName,
         status: '休憩中',
@@ -399,18 +396,25 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      // メンバーのリアルタイム同期リスナー開始
       unsubscribeMembers = db.collection('rooms').doc(currentRoom.id).collection('members')
         .onSnapshot((snapshot) => {
           remoteMembers = [];
           snapshot.forEach((doc) => {
-            remoteMembers.push({ id: doc.id, ...doc.data() });
+            const data = { id: doc.id, ...doc.data() };
+            remoteMembers.push(data);
+            // 新しい他ユーザーが入ってきたらWebRTCオファーを開始
+            if (data.id !== myId && !peerConnections[data.id]) {
+              initiateCall(data.id);
+            }
           });
           renderMembers();
           updateWorkingCount();
         });
 
-      // ティッカー通知リスナー開始
+      // シグナリング受信リスナー (WebRTC)
+      listenSignaling();
+
+      // ティッカー通知
       unsubscribeTicker = db.collection('rooms').doc(currentRoom.id).collection('tickers')
         .orderBy('timestamp', 'desc').limit(1)
         .onSnapshot((snapshot) => {
@@ -428,30 +432,281 @@
       stopScreenShare();
       clearInterval(timerInterval);
 
+      // WebRTC 切断
+      Object.keys(peerConnections).forEach(k => {
+        peerConnections[k].close();
+        delete peerConnections[k];
+      });
+      remoteStreams = {};
+
       if (currentRoom) {
-        // 退室時にFirestoreから自分を削除
         await db.collection('rooms').doc(currentRoom.id).collection('members').doc(myId).delete();
       }
       if (unsubscribeMembers) unsubscribeMembers();
       if (unsubscribeTicker) unsubscribeTicker();
+      if (unsubscribeSignals) unsubscribeSignals();
 
       document.getElementById('room-view').classList.add('hidden');
       document.getElementById('lobby-view').classList.remove('hidden');
     }
 
-    // 自分のステータスをFirestoreに更新
     async function updateMyFirestoreState(data) {
       if (!currentRoom) return;
       await db.collection('rooms').doc(currentRoom.id).collection('members').doc(myId).set(data, { merge: true });
     }
 
-    // タイマー関連
+    // ================= WebRTC P2P 映像共有ロジック =================
+    function getOrCreatePeerConnection(targetUserId) {
+      if (peerConnections[targetUserId]) return peerConnections[targetUserId];
+
+      const pc = new RTCPeerConnection(rtcConfig);
+
+      // ローカル映像トラックを追加
+      const activeStream = cameraStream || screenStream;
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => pc.addTrack(track, activeStream));
+      }
+
+      // 相手の映像を受信したとき
+      pc.ontrack = (event) => {
+        remoteStreams[targetUserId] = event.streams[0];
+        renderMembers();
+      };
+
+      // ICE候補を相手に通知
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          sendSignal(targetUserId, { candidate: event.candidate.toJSON() });
+        }
+      };
+
+      peerConnections[targetUserId] = pc;
+      return pc;
+    }
+
+    async function initiateCall(targetUserId) {
+      const pc = getOrCreatePeerConnection(targetUserId);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      sendSignal(targetUserId, { offer: { type: offer.type, sdp: offer.sdp } });
+    }
+
+    function sendSignal(targetUserId, data) {
+      if (!currentRoom) return;
+      db.collection('rooms').doc(currentRoom.id).collection('signals').add({
+        from: myId,
+        to: targetUserId,
+        ...data,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    function listenSignaling() {
+      unsubscribeSignals = db.collection('rooms').doc(currentRoom.id).collection('signals')
+        .where('to', '==', myId)
+        .onSnapshot((snapshot) => {
+          snapshot.docChanges().forEach(async (change) => {
+            if (change.type === 'added') {
+              const signal = change.doc.data();
+              const fromId = signal.from;
+              const pc = getOrCreatePeerConnection(fromId);
+
+              if (signal.offer) {
+                await pc.setRemoteDescription(new RTCSessionDescription(signal.offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                sendSignal(fromId, { answer: { type: answer.type, sdp: answer.sdp } });
+              } else if (signal.answer) {
+                await pc.setRemoteDescription(new RTCSessionDescription(signal.answer));
+              } else if (signal.candidate) {
+                try {
+                  await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+                } catch (e) {
+                  console.error('ICE candidate error', e);
+                }
+              }
+            }
+          });
+        });
+    }
+
+    // カメラ/画面共有のストリーム更新時にすべてのPeerにトラックを再設定
+    function updateTracksForAllPeers(stream, isReplacing = false) {
+      Object.keys(peerConnections).forEach(targetId => {
+        const pc = peerConnections[targetId];
+        const senders = pc.getSenders();
+
+        if (!stream) {
+          // 停止時：トラック削除
+          senders.forEach(s => pc.removeTrack(s));
+        } else {
+          const newTrack = stream.getVideoTracks()[0];
+          const sender = senders.find(s => s.track && s.track.kind === 'video');
+          if (sender) {
+            sender.replaceTrack(newTrack);
+          } else {
+            pc.addTrack(newTrack, stream);
+          }
+        }
+        initiateCall(targetId);
+      });
+    }
+
+    // カメラ
+    async function toggleCamera() {
+      if (isBreak) {
+        alert('休憩中はカメラをONにできません');
+        return;
+      }
+      const btn = document.getElementById('camera-toggle-btn');
+      if (!isCameraOn) {
+        try {
+          cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          isCameraOn = true;
+          updateMyFirestoreState({ isCamera: true });
+          updateTracksForAllPeers(cameraStream);
+          btn.innerText = 'カメラ ON';
+          btn.classList.add('bg-gray-900', 'text-white');
+        } catch (err) {
+          alert('カメラへのアクセスを許可してください');
+        }
+      } else {
+        stopCamera();
+      }
+      renderMembers();
+    }
+
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+      isCameraOn = false;
+      updateMyFirestoreState({ isCamera: false });
+      updateTracksForAllPeers(screenStream || null);
+      const btn = document.getElementById('camera-toggle-btn');
+      if (btn) {
+        btn.innerText = 'カメラ OFF';
+        btn.classList.remove('bg-gray-900', 'text-white');
+      }
+    }
+
+    // 画面共有
+    async function toggleScreenShare() {
+      const btn = document.getElementById('screen-share-btn');
+      if (!isScreenSharing) {
+        try {
+          screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+          isScreenSharing = true;
+          updateMyFirestoreState({ isScreen: true });
+          updateTracksForAllPeers(screenStream);
+          btn.innerText = '画面共有 ON';
+          btn.classList.add('bg-gray-900', 'text-white');
+
+          screenStream.getVideoTracks()[0].onended = () => {
+            stopScreenShare();
+            renderMembers();
+          };
+        } catch (err) {
+          console.log(err);
+        }
+      } else {
+        stopScreenShare();
+      }
+      renderMembers();
+    }
+
+    function stopScreenShare() {
+      if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop());
+        screenStream = null;
+      }
+      isScreenSharing = false;
+      updateMyFirestoreState({ isScreen: false });
+      updateTracksForAllPeers(cameraStream || null);
+      const btn = document.getElementById('screen-share-btn');
+      if (btn) {
+        btn.innerText = '画面共有';
+        btn.classList.remove('bg-gray-900', 'text-white');
+      }
+    }
+
+    // メンバー描画（相手の受信映像も表示）
+    function renderMembers() {
+      const container = document.getElementById('members-container');
+      container.innerHTML = '';
+
+      remoteMembers.forEach((m) => {
+        const isMe = m.id === myId;
+        const card = document.createElement('div');
+        card.className = "p-3 rounded-xl border border-gray-200 bg-white flex flex-col gap-2 shadow-xs";
+        
+        const isWorking = m.status === '作業中';
+        const displayTodo = m.isTodoPublic ? (m.currentTodo || '設定なし') : '🔒 非公開';
+
+        card.innerHTML = `
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full ${isWorking ? 'bg-emerald-500' : 'bg-amber-400'}"></span>
+              <span class="font-bold text-xs text-gray-900">${m.name || 'ゲスト'} ${isMe ? '(自分)' : ''}</span>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${isWorking ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}">${m.status || '待機中'}</span>
+          </div>
+
+          <!-- カメラ & 画面共有の横並び -->
+          <div class="grid grid-cols-2 gap-2 h-24">
+            <div class="bg-[#eff3f4] border border-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden text-[10px] text-gray-400 font-medium">
+              ${isMe && isCameraOn 
+                ? `<video id="active-local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>` 
+                : (!isMe && m.isCamera && remoteStreams[m.id]
+                  ? `<video id="video-camera-${m.id}" autoplay playsinline class="w-full h-full object-cover"></video>`
+                  : `<span>${m.isCamera ? '受信待機中...' : 'カメラOFF'}</span>`)}
+            </div>
+
+            <div class="bg-[#eff3f4] border border-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden text-[10px] text-gray-400 font-medium">
+              ${isMe && isScreenSharing 
+                ? `<video id="active-screen-video" autoplay playsinline muted class="w-full h-full object-cover"></video>` 
+                : (!isMe && m.isScreen && remoteStreams[m.id]
+                  ? `<video id="video-screen-${m.id}" autoplay playsinline class="w-full h-full object-cover"></video>`
+                  : `<span>${m.isScreen ? '画面共有中' : '画面共有OFF'}</span>`)}
+            </div>
+          </div>
+
+          <div class="${hideAllDetails ? 'hidden' : 'block'} text-[11px] text-gray-500 pt-1 border-t border-gray-100 space-y-0.5">
+            <div><span class="text-gray-400">やる事:</span> <span class="text-gray-700 font-medium">${displayTodo}</span></div>
+            <div><span class="text-gray-400">集中時間:</span> <span class="text-gray-700 font-medium">${m.focusTime || '0分'}</span></div>
+            ${m.comment ? `<div class="text-amber-600 font-medium mt-1">💬 "${m.comment}"</div>` : ''}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      // 映像ストリームをDOMに割り当て
+      if (isCameraOn && cameraStream) {
+        const v = document.getElementById('active-local-video');
+        if (v) v.srcObject = cameraStream;
+      }
+      if (isScreenSharing && screenStream) {
+        const sv = document.getElementById('active-screen-video');
+        if (sv) sv.srcObject = screenStream;
+      }
+      // 相手端末のストリーム
+      remoteMembers.forEach((m) => {
+        if (m.id !== myId && remoteStreams[m.id]) {
+          const cv = document.getElementById(`video-camera-${m.id}`);
+          if (cv) cv.srcObject = remoteStreams[m.id];
+          const sv = document.getElementById(`video-screen-${m.id}`);
+          if (sv) sv.srcObject = remoteStreams[m.id];
+        }
+      });
+    }
+
+    // タイマー・ToDo関連ロジック
     function applyCustomTime() {
       const wMins = parseInt(document.getElementById('custom-work-mins').value) || 25;
       const bMins = parseInt(document.getElementById('custom-break-mins').value) || 5;
       workDuration = wMins * 60;
       breakDuration = bMins * 60;
-      
       if (!isRunning) {
         timeLeft = isBreak ? breakDuration : workDuration;
         updateTimerDisplay();
@@ -508,9 +763,7 @@
       document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-amber-500 font-bold mb-2';
       document.getElementById('timer-start-btn').innerText = '集中を再開';
       document.getElementById('break-comment-box').classList.remove('hidden');
-      
       if (isCameraOn) stopCamera();
-
       updateTimerDisplay();
       updateMyFirestoreState({ status: '休憩中' });
     }
@@ -522,7 +775,6 @@
       document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-[#1d9bf0] font-bold mb-2';
       document.getElementById('timer-start-btn').innerText = 'スタート';
       document.getElementById('break-comment-box').classList.add('hidden');
-
       updateTimerDisplay();
       updateMyFirestoreState({ status: '作業中' });
     }
@@ -538,7 +790,6 @@
       document.getElementById('active-working-count').innerText = `● ${working}人が集中作業中`;
     }
 
-    // ToDo管理
     function renderTodos() {
       const container = document.getElementById('todo-list');
       container.innerHTML = '';
@@ -594,139 +845,6 @@
       renderMembers();
     }
 
-    // メンバー一覧描画（同期されたFirestoreのリストを使用）
-    function renderMembers() {
-      const container = document.getElementById('members-container');
-      container.innerHTML = '';
-
-      remoteMembers.forEach((m) => {
-        const isMe = m.id === myId;
-        const card = document.createElement('div');
-        card.className = "p-3 rounded-xl border border-gray-200 bg-white flex flex-col gap-2 shadow-xs";
-        
-        const isWorking = m.status === '作業中';
-        const displayTodo = m.isTodoPublic ? (m.currentTodo || '設定なし') : '🔒 非公開';
-
-        card.innerHTML = `
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full ${isWorking ? 'bg-emerald-500' : 'bg-amber-400'}"></span>
-              <span class="font-bold text-xs text-gray-900">${m.name || 'ゲスト'} ${isMe ? '(自分)' : ''}</span>
-            </div>
-            <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${isWorking ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}">${m.status || '待機中'}</span>
-          </div>
-
-          <!-- カメラ & 画面共有の横並び -->
-          <div class="grid grid-cols-2 gap-2 h-24">
-            <div class="bg-[#eff3f4] border border-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden text-[10px] text-gray-400 font-medium">
-              ${isMe && isCameraOn 
-                ? `<video id="active-local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>` 
-                : `<span>${m.isCamera ? 'カメラON' : 'カメラOFF'}</span>`}
-            </div>
-
-            <div class="bg-[#eff3f4] border border-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden text-[10px] text-gray-400 font-medium">
-              ${isMe && isScreenSharing 
-                ? `<video id="active-screen-video" autoplay playsinline muted class="w-full h-full object-cover"></video>` 
-                : `<span>${m.isScreen ? '画面共有中' : '画面共有OFF'}</span>`}
-            </div>
-          </div>
-
-          <!-- やる事・集中時間（折りたたみ可能） -->
-          <div class="${hideAllDetails ? 'hidden' : 'block'} text-[11px] text-gray-500 pt-1 border-t border-gray-100 space-y-0.5">
-            <div><span class="text-gray-400">やる事:</span> <span class="text-gray-700 font-medium">${displayTodo}</span></div>
-            <div><span class="text-gray-400">集中時間:</span> <span class="text-gray-700 font-medium">${m.focusTime || '0分'}</span></div>
-            ${m.comment ? `<div class="text-amber-600 font-medium mt-1">💬 "${m.comment}"</div>` : ''}
-          </div>
-        `;
-        container.appendChild(card);
-      });
-
-      if (isCameraOn && cameraStream) {
-        const v = document.getElementById('active-local-video');
-        if (v) v.srcObject = cameraStream;
-      }
-      if (isScreenSharing && screenStream) {
-        const sv = document.getElementById('active-screen-video');
-        if (sv) sv.srcObject = screenStream;
-      }
-    }
-
-    // カメラ
-    async function toggleCamera() {
-      if (isBreak) {
-        alert('休憩中はカメラをONにできません');
-        return;
-      }
-      const btn = document.getElementById('camera-toggle-btn');
-      if (!isCameraOn) {
-        try {
-          cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-          isCameraOn = true;
-          updateMyFirestoreState({ isCamera: true });
-          btn.innerText = 'カメラ ON';
-          btn.classList.add('bg-gray-900', 'text-white');
-        } catch (err) {
-          alert('カメラへのアクセスを許可してください');
-        }
-      } else {
-        stopCamera();
-      }
-      renderMembers();
-    }
-
-    function stopCamera() {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-        cameraStream = null;
-      }
-      isCameraOn = false;
-      updateMyFirestoreState({ isCamera: false });
-      const btn = document.getElementById('camera-toggle-btn');
-      if (btn) {
-        btn.innerText = 'カメラ OFF';
-        btn.classList.remove('bg-gray-900', 'text-white');
-      }
-    }
-
-    // 画面共有
-    async function toggleScreenShare() {
-      const btn = document.getElementById('screen-share-btn');
-      if (!isScreenSharing) {
-        try {
-          screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-          isScreenSharing = true;
-          updateMyFirestoreState({ isScreen: true });
-          btn.innerText = '画面共有 ON';
-          btn.classList.add('bg-gray-900', 'text-white');
-
-          screenStream.getVideoTracks()[0].onended = () => {
-            stopScreenShare();
-            renderMembers();
-          };
-        } catch (err) {
-          console.log(err);
-        }
-      } else {
-        stopScreenShare();
-      }
-      renderMembers();
-    }
-
-    function stopScreenShare() {
-      if (screenStream) {
-        screenStream.getTracks().forEach(track => track.stop());
-        screenStream = null;
-      }
-      isScreenSharing = false;
-      updateMyFirestoreState({ isScreen: false });
-      const btn = document.getElementById('screen-share-btn');
-      if (btn) {
-        btn.innerText = '画面共有';
-        btn.classList.remove('bg-gray-900', 'text-white');
-      }
-    }
-
-    // 休憩コメント
     function postBreakComment() {
       const inp = document.getElementById('break-comment-input');
       const val = inp.value.trim();
