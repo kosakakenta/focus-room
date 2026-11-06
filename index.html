@@ -3,7 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CoFocus - 集中作業ルーム</title>
+  <title>CoFocus - 集中特化のバーチャル自習室</title>
+  <meta name="description" content="作業中はチャットが強制消滅。ログイン不要で誰でも集まれるポモドーロ型バーチャル自習室。">
+  
+  <!-- OGP / Xカード設定 -->
+  <meta property="og:title" content="CoFocus - 集中特化のバーチャル自習室">
+  <meta property="og:description" content="作業中はチャットが強制消滅。ログイン不要・URL共有で即スタート。">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ffffff">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -29,7 +37,7 @@
     <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
       <div>
         <h1 class="text-2xl font-black tracking-tight text-gray-900">CoFocus</h1>
-        <p class="text-xs text-gray-400 mt-0.5">仲間と一緒に集中するバーチャル自習室</p>
+        <p class="text-xs text-gray-400 mt-0.5">作業中はチャット強制消滅。集中特化のバーチャル自習室</p>
       </div>
       <button onclick="openCreateModal()" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white text-xs font-bold px-4 py-2 rounded-full transition shadow-sm active:scale-95">
         ＋ 部屋を作成
@@ -155,7 +163,7 @@
         </div>
       </div>
 
-      <!-- 中央カラム: タイマー & 通知履歴 -->
+      <!-- 中央カラム: タイマー & 通知履歴 & Xシェア -->
       <div class="md:col-span-5 flex flex-col items-center justify-between p-4 md:p-6 border-r border-gray-200 bg-[#fafafa]/50 relative overflow-y-auto custom-scroll">
         <div class="w-full bg-white border border-gray-200 rounded-2xl p-3 flex justify-around items-center text-xs shadow-xs">
           <div class="flex items-center gap-1.5">
@@ -184,6 +192,12 @@
               リセット
             </button>
           </div>
+
+          <!-- 休憩時に現れるX拡散ボタン -->
+          <button id="x-share-btn" onclick="shareToX()" class="hidden mt-4 bg-black hover:bg-gray-800 text-white text-xs font-bold px-4 py-2 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            <span>成果をポストして休憩</span>
+          </button>
         </div>
 
         <div class="w-full bg-white border border-gray-200 rounded-2xl p-3.5 shadow-xs flex flex-col gap-1.5 max-h-28 overflow-hidden">
@@ -203,12 +217,12 @@
         <div id="members-container" class="space-y-2 overflow-y-auto custom-scroll flex-1 pr-1 mb-3"></div>
 
         <!-- 休憩チャットコンテナ -->
-        <div class="h-56 max-h-56 min-h-[14rem] flex flex-col border border-gray-200 rounded-2xl overflow-hidden bg-[#fafafa] shrink-0">
+        <div class="h-60 max-h-60 min-h-[15rem] flex flex-col border border-gray-200 rounded-2xl overflow-hidden bg-[#fafafa] shrink-0">
           <div class="bg-gray-50 px-3 py-2 border-b border-gray-200 text-[11px] font-bold text-gray-600 flex justify-between items-center">
             <span>休憩チャット</span>
           </div>
 
-          <!-- 作業中の完全ロック画面（作業中はここだけ表示） -->
+          <!-- 作業中の完全ロック画面 -->
           <div id="chat-locked-cover" class="flex-1 flex flex-col items-center justify-center p-4 text-center bg-[#fafafa]">
             <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-1.5">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,6 +236,7 @@
           <!-- 休憩・一時停止中のみ表示されるチャット本体 -->
           <div id="chat-active-container" class="hidden flex-1 flex flex-col overflow-hidden">
             <div id="live-chat-messages" class="flex-1 p-2.5 space-y-1.5 overflow-y-auto custom-scroll text-xs"></div>
+            
             <div class="p-2 bg-white border-t border-gray-200 flex gap-1.5">
               <input type="text" id="live-chat-input" placeholder="休憩メッセージを送る..." class="flex-1 bg-[#f7f9f9] border border-gray-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#1d9bf0] focus:bg-white transition">
               <button id="live-chat-send-btn" class="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white text-xs px-3.5 py-1.5 rounded-xl font-bold transition shadow-xs">送信</button>
@@ -380,7 +395,7 @@
             let hasActive = false;
             membersSnap.forEach(mDoc => {
               const hb = mDoc.data().lastHeartbeat || 0;
-              if (now - hb < 120000) hasActive = true;
+              if (now - hb < 180000) hasActive = true;
             });
             if (!hasActive) {
               await deleteRoomCompletely(doc.id);
@@ -622,6 +637,7 @@
       document.getElementById('timer-state-label').innerText = '一時停止中';
       document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-amber-500 font-bold mb-2';
       document.getElementById('timer-start-btn').innerText = 'スタート';
+      document.getElementById('x-share-btn').classList.add('hidden');
 
       applyCustomTime();
       renderTodos();
@@ -639,9 +655,10 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
+      // ハートビートを90秒に延長（無料枠防衛）
       heartbeatInterval = setInterval(() => {
         updateMyFirestoreState({ lastHeartbeat: Date.now() });
-      }, 30000);
+      }, 90000);
 
       unsubscribeMembers = db.collection('rooms').doc(currentRoom.id).collection('members')
         .onSnapshot((snapshot) => {
@@ -649,7 +666,7 @@
           const now = Date.now();
           snapshot.forEach((doc) => {
             const data = { id: doc.id, ...doc.data() };
-            if (!data.lastHeartbeat || (now - data.lastHeartbeat < 120000) || data.id === myId) {
+            if (!data.lastHeartbeat || (now - data.lastHeartbeat < 180000) || data.id === myId) {
               remoteMembers.push(data);
               if (data.id !== myId && !peerConnections[data.id]) {
                 initiateCall(data.id);
@@ -696,7 +713,7 @@
       await db.collection('rooms').doc(currentRoom.id).collection('members').doc(myId).set(data, { merge: true });
     }
 
-    // ================= WebRTC =================
+    // ================= WebRTC & シグナリング即時削除（DB節約） =================
     function getOrCreatePeerConnection(targetUserId) {
       if (peerConnections[targetUserId]) return peerConnections[targetUserId];
       const pc = new RTCPeerConnection(rtcConfig);
@@ -743,6 +760,9 @@
               const signal = change.doc.data();
               const fromId = signal.from;
               const pc = getOrCreatePeerConnection(fromId);
+
+              // 処理済みのシグナルを即時削除して通信量とドキュメント数を削減
+              change.doc.ref.delete().catch(() => {});
 
               if (signal.offer) {
                 await pc.setRemoteDescription(new RTCSessionDescription(signal.offer));
@@ -928,6 +948,7 @@
     function startTimerLoop() {
       isRunning = true;
       document.getElementById('timer-start-btn').innerText = '一時停止';
+      document.getElementById('x-share-btn').classList.add('hidden');
       updateChatAccessibility();
       
       timerEndTime = Date.now() + (timeLeft * 1000);
@@ -970,6 +991,7 @@
 
       document.getElementById('timer-state-label').innerText = '休憩中';
       document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-amber-500 font-bold mb-2';
+      document.getElementById('x-share-btn').classList.remove('hidden'); // シェアボタン表示
       
       suspendMediaStreams();
 
@@ -986,6 +1008,7 @@
 
       document.getElementById('timer-state-label').innerText = '作業中';
       document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-[#1d9bf0] font-bold mb-2';
+      document.getElementById('x-share-btn').classList.add('hidden');
 
       updateTimerDisplay();
       updateMyFirestoreState({ status: '作業中' });
@@ -998,6 +1021,7 @@
       document.getElementById('timer-state-label').innerText = '一時停止中';
       document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-amber-500 font-bold mb-2';
       document.getElementById('timer-start-btn').innerText = '再開する';
+      document.getElementById('x-share-btn').classList.remove('hidden');
       
       suspendMediaStreams();
       
@@ -1015,6 +1039,7 @@
       updateChatAccessibility();
 
       if (!isBreak) {
+        document.getElementById('x-share-btn').classList.add('hidden');
         restoreMediaStreams();
       }
     }
@@ -1029,6 +1054,7 @@
       document.getElementById('timer-state-label').innerText = '一時停止中';
       document.getElementById('timer-state-label').className = 'text-xs tracking-widest text-amber-500 font-bold mb-2';
       document.getElementById('timer-start-btn').innerText = 'スタート';
+      document.getElementById('x-share-btn').classList.add('hidden');
       updateTimerDisplay();
       updateMyFirestoreState({ status: '一時停止中' });
       updateChatAccessibility();
@@ -1037,6 +1063,14 @@
     function updateWorkingCount() {
       const working = remoteMembers.filter(m => m.status === '作業中').length;
       document.getElementById('active-working-count').innerText = `● ${working}人が作業中`;
+    }
+
+    // ================= X（Twitter）拡散 =================
+    function shareToX() {
+      const roomLink = `${window.location.origin}${window.location.pathname}?room=${currentRoom ? currentRoom.id : ''}`;
+      const text = `CoFocusで集中作業中！\n累計作業時間: ${totalFocusedMinutes}分\n\n作業中はチャットが強制消滅するオンライン自習室。一緒に入りませんか？\n#CoFocus #作業通話 #ポモドーロ\n`;
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(roomLink)}`;
+      window.open(url, '_blank');
     }
 
     // ================= ToDo 管理 =================
@@ -1208,17 +1242,15 @@
         });
     }
 
-    // ================= 休憩チャット制御（作業中は完全ロック） =================
+    // ================= 休憩チャット制御 =================
     function updateChatAccessibility() {
       const lockedCover = document.getElementById('chat-locked-cover');
       const activeContainer = document.getElementById('chat-active-container');
 
-      // 作業中（タイマー稼働中 かつ 休憩ではない）は確実にロック画面を表示
       if (isRunning && !isBreak) {
         lockedCover.classList.remove('hidden');
         activeContainer.classList.add('hidden');
       } else {
-        // 休憩中 または 一時停止中はチャットを開放
         lockedCover.classList.add('hidden');
         activeContainer.classList.remove('hidden');
       }
